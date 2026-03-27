@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriConnect - Connexion</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.css">
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-header">
+            <h1>AgriConnect 🌾</h1>
+            <p>Le pont entre la terre et le marché</p>
+        </div>
+        <div class="form-group">
+            <label>Numéro de téléphone</label>
+            <input type="tel" id="phone">
+        </div>
+        <div class="form-group">
+            <label>Mot de passe</label>
+            <input type="password" id="password" placeholder="Votre mot de passe">
+        </div>
+        <button class="btn-primary" onclick="login()">Se connecter</button>
+        <div id="message" style="margin-top: 15px; color: red; font-size: 0.85rem;"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+    const input = document.querySelector("#phone");
+    window.intlTelInput(input, {
+        initialCountry: "sn",
+        separateDialCode: true, // Garde le code à côté du drapeau
+        allowDropdown: true,
+        utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js",
+    });
+    </script>
+</body>
+</html>
