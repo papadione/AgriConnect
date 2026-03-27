@@ -6,13 +6,31 @@ class Product {
     static async create(farmerId, data) {
         const { name, categoryId, description, price, unit, quantity, minOrder, images } = data;
         
+        let imagesJson = '[]';
+        if (images && Array.isArray(images) && images.length > 0) {
+            const imagesArray = images.map(img => ({ url: img }));
+            imagesJson = JSON.stringify(imagesArray);
+        } else if (typeof images === 'string' && images) {
+            imagesJson = JSON.stringify([{ url: images }]);
+        }
+        
         const query = `
             INSERT INTO products (farmer_id, name, category_id, description, price, unit, quantity, min_order, images)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
             RETURNING id, farmer_id, name, price, unit, quantity, created_at
         `;
         
-        const result = await db.query(query, [farmerId, name, categoryId, description, price, unit, quantity, minOrder || 1, images || []]);
+        const result = await db.query(query, [
+            farmerId, 
+            name, 
+            categoryId, 
+            description, 
+            price, 
+            unit, 
+            quantity, 
+            minOrder || 1, 
+            imagesJson
+        ]);
         return result.rows[0];
     }
     
@@ -32,35 +50,30 @@ class Product {
         const values = [];
         let paramCount = 1;
         
-        // Filtre par catégorie
         if (filters.categoryId) {
             query += ` AND p.category_id = $${paramCount}`;
             values.push(filters.categoryId);
             paramCount++;
         }
         
-        // Filtre par région
         if (filters.region) {
             query += ` AND u.location = $${paramCount}`;
             values.push(filters.region);
             paramCount++;
         }
         
-        // Filtre par prix max
         if (filters.maxPrice) {
             query += ` AND p.price <= $${paramCount}`;
             values.push(filters.maxPrice);
             paramCount++;
         }
         
-        // Recherche par mot-clé
         if (filters.search) {
             query += ` AND p.name ILIKE $${paramCount}`;
             values.push(`%${filters.search}%`);
             paramCount++;
         }
         
-        // Tri
         switch (filters.sort) {
             case 'price_asc':
                 query += ` ORDER BY p.price ASC`;
@@ -75,14 +88,31 @@ class Product {
                 query += ` ORDER BY p.created_at DESC`;
         }
         
-        // Pagination
         const limit = filters.limit || 20;
         const offset = filters.offset || 0;
         query += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
         values.push(limit, offset);
         
         const result = await db.query(query, values);
-        return result.rows;
+        
+        const formattedRows = result.rows.map(row => {
+            let images = [];
+            if (row.images) {
+                try {
+                    if (typeof row.images === 'string') {
+                        images = JSON.parse(row.images);
+                    } else if (Array.isArray(row.images)) {
+                        images = row.images;
+                    }
+                    images = images.map(img => img.url || img);
+                } catch (e) {
+                    images = [];
+                }
+            }
+            return { ...row, images };
+        });
+        
+        return formattedRows;
     }
     
     // Récupérer un produit par ID
@@ -101,14 +131,28 @@ class Product {
         const result = await db.query(query, [id]);
         
         if (result.rows.length > 0) {
-            // Incrémenter le compteur de vues
             await db.query('UPDATE products SET views = views + 1 WHERE id = $1', [id]);
+            
+            let images = [];
+            if (result.rows[0].images) {
+                try {
+                    if (typeof result.rows[0].images === 'string') {
+                        images = JSON.parse(result.rows[0].images);
+                    } else if (Array.isArray(result.rows[0].images)) {
+                        images = result.rows[0].images;
+                    }
+                    images = images.map(img => img.url || img);
+                } catch (e) {
+                    images = [];
+                }
+            }
+            result.rows[0].images = images;
         }
         
         return result.rows[0];
     }
     
-    // Récupérer les produits d'un producteur
+    // Récupérer les produits d'un agriculteur
     static async findByFarmer(farmerId) {
         const query = `
             SELECT p.*, c.name as category_name
@@ -118,12 +162,30 @@ class Product {
             ORDER BY p.created_at DESC
         `;
         const result = await db.query(query, [farmerId]);
-        return result.rows;
+        
+        const formattedRows = result.rows.map(row => {
+            let images = [];
+            if (row.images) {
+                try {
+                    if (typeof row.images === 'string') {
+                        images = JSON.parse(row.images);
+                    } else if (Array.isArray(row.images)) {
+                        images = row.images;
+                    }
+                    images = images.map(img => img.url || img);
+                } catch (e) {
+                    images = [];
+                }
+            }
+            return { ...row, images };
+        });
+        
+        return formattedRows;
     }
     
     // Mettre à jour un produit
     static async update(id, farmerId, data) {
-        const { name, price, quantity, description, isAvailable } = data;
+        const { name, price, quantity, description, unit, categoryId, isAvailable } = data;
         
         const query = `
             UPDATE products 
@@ -131,13 +193,31 @@ class Product {
                 price = COALESCE($2, price),
                 quantity = COALESCE($3, quantity),
                 description = COALESCE($4, description),
-                is_available = COALESCE($5, is_available),
+                unit = COALESCE($5, unit),
+                category_id = COALESCE($6, category_id),
+                is_available = COALESCE($7, is_available),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $6 AND farmer_id = $7
+            WHERE id = $8 AND farmer_id = $9
             RETURNING *
         `;
         
-        const result = await db.query(query, [name, price, quantity, description, isAvailable, id, farmerId]);
+        const result = await db.query(query, [
+            name, price, quantity, description, unit, categoryId, isAvailable, id, farmerId
+        ]);
+        return result.rows[0];
+    }
+    
+    // Mettre à jour le statut (activer/désactiver)
+    static async updateStatus(id, farmerId, isAvailable) {
+        const query = `
+            UPDATE products 
+            SET is_available = $1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $2 AND farmer_id = $3
+            RETURNING *
+        `;
+        
+        const result = await db.query(query, [isAvailable, id, farmerId]);
         return result.rows[0];
     }
     

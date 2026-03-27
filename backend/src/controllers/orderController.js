@@ -8,7 +8,7 @@ exports.createOrder = async (req, res) => {
         const { farmerId, items, deliveryAddress, deliveryPhone, notes } = req.body;
         
         if (!farmerId || !items || !deliveryAddress) {
-            return res.status(400).json({ error: 'Veuillez remplir tous les champs obligatoires' });
+            return res.status(400).json({ erreur: 'Veuillez remplir tous les champs obligatoires' });
         }
         
         // Calculer le total
@@ -19,11 +19,11 @@ exports.createOrder = async (req, res) => {
             const product = await Product.findById(item.productId);
             
             if (!product) {
-                return res.status(404).json({ error: `Produit ${item.productId} non trouvé` });
+                return res.status(404).json({ erreur: `Produit ${item.productId} non trouvé` });
             }
             
             if (product.quantity < item.quantity) {
-                return res.status(400).json({ error: `Stock insuffisant pour ${product.name}` });
+                return res.status(400).json({ erreur: `Stock insuffisant pour ${product.name}` });
             }
             
             const subtotal = product.price * item.quantity;
@@ -50,13 +50,13 @@ exports.createOrder = async (req, res) => {
         });
         
         res.status(201).json({
-            success: true,
-            order
+            succes: true,
+            commande: order
         });
         
     } catch (error) {
         console.error('Erreur création commande:', error);
-        res.status(500).json({ error: 'Erreur lors de la création de la commande' });
+        res.status(500).json({ erreur: 'Erreur lors de la création de la commande' });
     }
 };
 
@@ -66,33 +66,33 @@ exports.getMyOrders = async (req, res) => {
         const orders = await Order.findByBuyer(req.user.id);
         
         res.json({
-            success: true,
-            orders
+            succes: true,
+            commandes: orders
         });
         
     } catch (error) {
         console.error('Erreur récupération commandes:', error);
-        res.status(500).json({ error: 'Erreur lors de la récupération des commandes' });
+        res.status(500).json({ erreur: 'Erreur lors de la récupération des commandes' });
     }
 };
 
-// Obtenir les commandes reçues (producteur)
+// Obtenir les commandes reçues (agriculteur)
 exports.getReceivedOrders = async (req, res) => {
     try {
         if (req.user.role !== 'farmer') {
-            return res.status(403).json({ error: 'Accès réservé aux producteurs' });
+            return res.status(403).json({ erreur: 'Accès réservé aux agriculteurs' });
         }
         
         const orders = await Order.findByFarmer(req.user.id);
         
         res.json({
-            success: true,
-            orders
+            succes: true,
+            commandes: orders
         });
         
     } catch (error) {
         console.error('Erreur récupération commandes reçues:', error);
-        res.status(500).json({ error: 'Erreur lors de la récupération des commandes' });
+        res.status(500).json({ erreur: 'Erreur lors de la récupération des commandes' });
     }
 };
 
@@ -103,22 +103,22 @@ exports.getOrderById = async (req, res) => {
         const order = await Order.findById(id);
         
         if (!order) {
-            return res.status(404).json({ error: 'Commande non trouvée' });
+            return res.status(404).json({ erreur: 'Commande non trouvée' });
         }
         
         // Vérifier que l'utilisateur a le droit de voir cette commande
         if (order.buyer_id !== req.user.id && order.farmer_id !== req.user.id && req.user.role !== 'admin') {
-            return res.status(403).json({ error: 'Accès non autorisé' });
+            return res.status(403).json({ erreur: 'Accès non autorisé' });
         }
         
         res.json({
-            success: true,
-            order
+            succes: true,
+            commande: order
         });
         
     } catch (error) {
         console.error('Erreur récupération commande:', error);
-        res.status(500).json({ error: 'Erreur lors de la récupération de la commande' });
+        res.status(500).json({ erreur: 'Erreur lors de la récupération de la commande' });
     }
 };
 
@@ -131,22 +131,22 @@ exports.updateOrderStatus = async (req, res) => {
         const validStatus = ['pending', 'confirmed', 'preparing', 'shipped', 'delivered', 'cancelled'];
         
         if (!validStatus.includes(status)) {
-            return res.status(400).json({ error: 'Statut invalide' });
+            return res.status(400).json({ erreur: 'Statut invalide' });
         }
         
         const order = await Order.updateStatus(id, status, req.user.id, req.user.role);
         
         if (!order) {
-            return res.status(404).json({ error: 'Commande non trouvée ou vous n\'avez pas les droits' });
+            return res.status(404).json({ erreur: 'Commande non trouvée ou vous n\'avez pas les droits' });
         }
         
         res.json({
-            success: true,
-            order
+            succes: true,
+            commande: order
         });
         
     } catch (error) {
         console.error('Erreur mise à jour statut:', error);
-        res.status(500).json({ error: 'Erreur lors de la mise à jour du statut' });
+        res.status(500).json({ erreur: 'Erreur lors de la mise à jour du statut' });
     }
 };

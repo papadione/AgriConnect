@@ -8,6 +8,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 const { port } = require('./config/env');
 
 const app = express();
@@ -25,10 +26,11 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/products', productRoutes);
-app.use('/api/v1/orders', orderRoutes);
+app.use('/api/v1/produits', productRoutes);
+app.use('/api/v1/commandes', orderRoutes);
+app.use('/api/v1/upload', uploadRoutes);
 
-// Route de santé (pour tester)
+// Route de santé
 app.get('/api/v1/health', (req, res) => {
     res.json({ 
         status: 'OK', 

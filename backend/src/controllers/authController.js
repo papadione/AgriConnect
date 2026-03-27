@@ -13,25 +13,21 @@ const traduireRole = (role) => {
 };
 
 // Inscription
-exports.register = async (req, res) => {
+const register = async (req, res) => {
     try {
         const { phone, password, fullName, role, location } = req.body;
         
-        // Vérifier si le numéro existe déjà
         const existingUser = await User.findByPhone(phone);
         if (existingUser) {
             return res.status(400).json({ erreur: 'Ce numéro de téléphone est déjà utilisé' });
         }
         
-        // Créer l'utilisateur
         const user = await User.register(phone, password, fullName, role, location);
         
-        // Si c'est un agriculteur, créer son profil
         if (role === 'farmer') {
             await User.createFarmerProfile(user.id);
         }
         
-        // Générer le token
         const token = generateToken(user.id, user.phone, user.role);
         
         res.status(201).json({
@@ -53,7 +49,7 @@ exports.register = async (req, res) => {
 };
 
 // Connexion
-exports.login = async (req, res) => {
+const login = async (req, res) => {
     try {
         const { phone, password } = req.body;
         
@@ -84,7 +80,7 @@ exports.login = async (req, res) => {
 };
 
 // Obtenir le profil
-exports.getProfile = async (req, res) => {
+const getProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         
@@ -112,7 +108,7 @@ exports.getProfile = async (req, res) => {
 };
 
 // Mettre à jour le profil
-exports.updateProfile = async (req, res) => {
+const updateProfile = async (req, res) => {
     try {
         const { fullName, location, avatarUrl } = req.body;
         
@@ -138,4 +134,12 @@ exports.updateProfile = async (req, res) => {
         console.error('Erreur mise à jour profil:', error);
         res.status(500).json({ erreur: 'Erreur lors de la mise à jour' });
     }
+};
+
+// EXPORT - IMPORTANT: Assure-toi que c'est la dernière ligne du fichier
+module.exports = {
+    register,
+    login,
+    getProfile,
+    updateProfile
 };
