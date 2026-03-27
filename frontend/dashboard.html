@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AgriConnect Sénégal — Tableau de bord</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <header class="header-simple">
+    <div class="header-container">
+      <div class="logo">
+        <div class="logo-mark">
+          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+            <circle cx="20" cy="20" r="18" stroke="#7AB648" stroke-width="1.5"/>
+            <path d="M20 29 C20 29 10 23 10 15 C10 10 15 7 20 11 C25 7 30 10 30 15 C30 23 20 29 20 29Z" fill="#7AB648" opacity="0.9"/>
+            <circle cx="20" cy="11" r="2" fill="#F5E6C8"/>
+          </svg>
+        </div>
+        <h1>Agri<span>Connect</span></h1>
+      </div>
+      
+      <div class="header-actions">
+        <button class="btn-catalogue" id="catalogueBtn">Catalogue</button>
+        <button class="btn-logout" id="logoutBtn">Déconnexion</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="dashboard-container">
+    
+    <div class="profile-card">
+      <div class="profile-avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <div class="profile-info">
+        <h3 id="profileName">Mamadou Diallo</h3>
+        <p id="profileRole">Acheteur</p>
+        <p id="profileLocation">Dakar, Sénégal</p>
+      </div>
+    </div>
+
+    <div class="dashboard-tabs">
+      <button class="tab-dash active" data-tab="orders">Commandes</button>
+      <button class="tab-dash" data-tab="products" id="farmerTab">Mes produits</button>
+    </div>
+
+    <div class="dashboard-content">
+      
+      <div class="tab-pane active" id="ordersPane">
+        <div class="section-header">
+          <h3>Historique des commandes</h3>
+        </div>
+        <div class="orders-list" id="ordersList">
+          <div class="loading-small">
+            <div class="spinner-small"></div>
+            <p>Chargement...</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="tab-pane" id="productsPane">
+        <div class="section-header">
+          <h3>Mes produits</h3>
+          <button class="btn-add" id="showAddProductBtn">Ajouter un produit</button>
+        </div>
+        
+        <div class="products-list" id="productsList">
+          <div class="loading-small">
+            <div class="spinner-small"></div>
+            <p>Chargement...</p>
+          </div>
+        </div>
+        
+        <div class="add-product-form" id="addProductForm" style="display: none;">
+          <h4>Nouveau produit</h4>
+          <div class="form-group">
+            <input type="text" id="productName" placeholder="Nom du produit" class="form-input">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <input type="number" id="productPrice" placeholder="Prix (FCFA)" class="form-input">
+            </div>
+            <div class="form-group">
+              <select id="productUnit" class="form-input">
+                <option value="kg">Kilogramme (kg)</option>
+                <option value="litre">Litre (L)</option>
+                <option value="botte">Botte</option>
+                <option value="piece">Pièce</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <input type="number" id="productQuantity" placeholder="Quantité disponible" class="form-input">
+            </div>
+          </div>
+          <div class="form-group">
+            <select id="productCategory" class="form-input">
+              <option value="legumes">Légumes</option>
+              <option value="fruits">Fruits</option>
+              <option value="cereales">Céréales</option>
+              <option value="tubercules">Tubercules</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button class="btn-cancel" id="cancelAddProduct">Annuler</button>
+            <button class="btn-save" id="saveProductBtn">Publier</button>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

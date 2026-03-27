@@ -1,0 +1,26 @@
+# Node modules
+node_modules/
+package-lock.json
+
+# Fichiers d'environnement
+.env
+.env.local
+
+# Uploads
+uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Base de données locale
+*.sqlite
+*.db
