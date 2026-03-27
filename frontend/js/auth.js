@@ -33,20 +33,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ================= FORMATAGE AUTOMATIQUE DES NUMÉROS AVEC ESPACES =================
-  /**
-   * Formate un numéro de téléphone avec des espaces pendant la saisie
-   * Format: 77 123 45 67
-   */
   function formatPhoneWithSpaces(input) {
-    // Supprimer tous les caractères non numériques
     let value = input.value.replace(/\D/g, '');
     
-    // Limiter à 9 chiffres (numéro sénégalais sans indicatif)
     if (value.length > 9) {
       value = value.slice(0, 9);
     }
     
-    // Ajouter les espaces selon le format: 77 123 45 67
     let formatted = '';
     if (value.length >= 1) {
       formatted = value.slice(0, 2);
@@ -61,14 +54,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     
-    // Mettre à jour la valeur du champ
     input.value = formatted;
-    
-    // Retourner le numéro brut (sans espaces)
     return value;
   }
 
-  // Appliquer le formatage au champ de connexion
   const loginPhoneInput = document.getElementById('loginPhone');
   if (loginPhoneInput) {
     loginPhoneInput.addEventListener('input', function() {
@@ -76,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Appliquer le formatage au champ d'inscription
   const regPhoneInput = document.getElementById('regPhone');
   if (regPhoneInput) {
     regPhoneInput.addEventListener('input', function() {
@@ -98,11 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /**
-   * Calcule la force du mot de passe
-   * @param {string} pwd - Le mot de passe à évaluer
-   * @returns {number} Score de 0 à 4
-   */
   function calcStrength(pwd) {
     let score = 0;
     if (pwd.length >= 6) score++;
@@ -114,52 +97,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ================= FORMATAGE DU NUMÉRO POUR LE BACKEND =================
-  /**
-   * Formate le numéro pour l'envoi à l'API
-   * Supprime les espaces et ajoute le préfixe 221
-   * @param {string} phone - Numéro avec espaces (ex: 77 123 45 67)
-   * @returns {string} Numéro formaté (ex: 221771234567)
-   */
   function formatPhoneNumber(phone) {
-    // Supprimer tous les espaces et caractères non numériques
     let cleaned = phone.replace(/\s/g, '').replace(/\D/g, '');
     
-    // Si le numéro commence par 0, le supprimer
     if (cleaned.startsWith('0')) {
       cleaned = cleaned.substring(1);
     }
     
-    // Ajouter le préfixe 221
-    cleaned = '221' + cleaned;
+    if (cleaned.startsWith('221')) {
+      cleaned = cleaned.substring(3);
+    }
     
     return cleaned;
   }
 
   // ================= VALIDATION DU NUMÉRO SÉNÉGALAIS =================
-  /**
-   * Valide un numéro de téléphone sénégalais
-   * Accepte les formats: 77 123 45 67, 771234567, +221771234567, 221771234567
-   * @param {string} phone - Numéro à valider
-   * @returns {boolean} true si valide, false sinon
-   */
   function isValidSenegalPhone(phone) {
-    // Supprimer tous les espaces pour la validation
     let cleaned = phone.replace(/\s/g, '');
     
-    // Supprimer le +221 si présent
     if (cleaned.startsWith('+221')) {
       cleaned = cleaned.substring(4);
     }
-    // Supprimer le 221 si présent
     else if (cleaned.startsWith('221')) {
       cleaned = cleaned.substring(3);
     }
-    // Supprimer le 0 si présent au début
     if (cleaned.startsWith('0')) {
       cleaned = cleaned.substring(1);
     }
     
-    // Vérifier que c'est un numéro sénégalais (70, 75, 76, 77, 78)
     const senegalRegex = /^(70|75|76|77|78)[0-9]{7}$/;
     return senegalRegex.test(cleaned);
   }
@@ -171,7 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const phone = document.getElementById('loginPhone')?.value;
     const password = document.getElementById('loginPassword')?.value;
     
-    // Validation
     if (!phone || !password) {
       showError('Veuillez remplir tous les champs', 'loginForm');
       return;
@@ -182,7 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // Formater le numéro (supprime les espaces et ajoute 221)
     const formattedPhone = formatPhoneNumber(phone);
     
     const btn = e.target.querySelector('.btn-primary');
@@ -201,22 +164,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await response.json();
       
       if (response.ok) {
-        // Connexion réussie
         localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('user', JSON.stringify(data.utilisateur));
         
-        // Redirection selon le rôle
-        if (data.user.role === 'farmer') {
+        if (data.utilisateur.role === 'agriculteur') {
           window.location.href = 'dashboard.html';
         } else {
           window.location.href = 'catalogue.html';
         }
       } else {
-        showError(data.error || 'Numéro ou mot de passe incorrect', 'loginForm');
+        showError(data.erreur || 'Numéro ou mot de passe incorrect', 'loginForm');
       }
     } catch (error) {
       console.error('Erreur:', error);
-      showError('Erreur de connexion au serveur. Vérifiez que le backend est démarré.', 'loginForm');
+      showError('Erreur de connexion au serveur', 'loginForm');
     } finally {
       setLoading(btn, false);
     }
@@ -226,7 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // Récupérer les valeurs
     const firstName = document.getElementById('regFirstName')?.value;
     const lastName = document.getElementById('regLastName')?.value;
     const phone = document.getElementById('regPhone')?.value;
@@ -234,10 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const region = document.getElementById('regRegion')?.value;
     const acceptTerms = document.getElementById('acceptTerms')?.checked;
     
-    // Récupérer le rôle (acheteur, agriculteur, grossiste)
     let role = document.querySelector('input[name="role"]:checked')?.value;
     
-    // Validation
     if (!firstName || !lastName || !phone || !password || !region) {
       showError('Veuillez remplir tous les champs', 'registerForm');
       return;
@@ -258,7 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // Convertir les rôles en français vers anglais pour le backend
     const roleMapping = {
       'acheteur': 'buyer',
       'agriculteur': 'farmer',
@@ -288,20 +245,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await response.json();
       
       if (response.ok) {
-        // Inscription réussie
         localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('user', JSON.stringify(data.utilisateur));
         
-        alert('✅ Inscription réussie ! Bienvenue sur AgriConnect Sénégal !');
+        alert('Inscription réussie ! Bienvenue sur AgriConnect Sénégal !');
         
-        // Redirection selon le rôle
-        if (data.user.role === 'farmer') {
+        if (data.utilisateur.role === 'agriculteur') {
           window.location.href = 'dashboard.html';
         } else {
           window.location.href = 'catalogue.html';
         }
       } else {
-        showError(data.error || 'Erreur lors de l\'inscription', 'registerForm');
+        showError(data.erreur || 'Erreur lors de l\'inscription', 'registerForm');
       }
     } catch (error) {
       console.error('Erreur:', error);
@@ -313,17 +268,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ================= FONCTIONS UTILITAIRES =================
   
-  /**
-   * Gère l'état de chargement d'un bouton
-   * @param {HTMLElement} btn - Le bouton
-   * @param {boolean} state - true = chargement, false = normal
-   */
   function setLoading(btn, state) {
     if (!btn) return;
     const span = btn.querySelector('span');
     if (state) {
       btn.dataset.originalText = span?.textContent || '';
-      if (span) span.textContent = '⏳ Chargement...';
+      if (span) span.textContent = 'Chargement...';
       btn.disabled = true;
       btn.style.opacity = '0.75';
     } else {
@@ -333,11 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  /**
-   * Affiche un message d'erreur dans le formulaire
-   * @param {string} msg - Le message d'erreur
-   * @param {string} formId - L'ID du formulaire
-   */
   function showError(msg, formId) {
     const form = document.getElementById(formId);
     let el = form?.querySelector('.form-error');
@@ -347,14 +292,11 @@ document.addEventListener('DOMContentLoaded', () => {
       el.style.cssText = 'color:#C0392B; font-size:.85rem; margin-top:8px; text-align:center; background:#FEF5F5; padding:8px; border-radius:8px;';
       form?.prepend(el);
     }
-    el.textContent = '⚠️ ' + msg;
+    el.textContent = msg;
     setTimeout(() => el.remove(), 5000);
   }
   
   // ================= VÉRIFICATION DE CONNEXION EXISTANTE =================
-  /**
-   * Vérifie si l'utilisateur est déjà connecté et redirige si nécessaire
-   */
   function checkExistingSession() {
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
@@ -362,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (token && user && window.location.pathname.includes('index.html')) {
       try {
         const userData = JSON.parse(user);
-        if (userData.role === 'farmer') {
+        if (userData.role === 'agriculteur') {
           window.location.href = 'dashboard.html';
         } else {
           window.location.href = 'catalogue.html';

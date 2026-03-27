@@ -863,3 +863,39 @@ body {
     text-align: center;
   }
 }
+/* Boutons de navigation */
+.btn-dashboard {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 0.5rem 1.25rem;
+    border-radius: 40px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+}
+
+.btn-dashboard:hover {
+    background: var(--cream);
+    border-color: var(--vert-principal);
+    color: var(--soil);
+}
+
+.btn-catalogue {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 0.5rem 1.25rem;
+    border-radius: 40px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+}
+
+.btn-catalogue:hover {
+    background: var(--cream);
+    border-color: var(--vert-principal);
+    color: var(--soil);
+}
