@@ -4,7 +4,7 @@ const db = require('../config/db');
 class Product {
     // Créer un nouveau produit
     static async create(farmerId, data) {
-        const { name, categoryId, description, price, unit, quantity, minOrder, images } = data;
+        const { name, categoryId, description, price, unit, quantity, minOrder, images, regions } = data;
         
         let imagesJson = '[]';
         if (images && Array.isArray(images) && images.length > 0) {
@@ -14,9 +14,14 @@ class Product {
             imagesJson = JSON.stringify([{ url: images }]);
         }
         
+        let regionsJson = '[]';
+        if (regions && Array.isArray(regions) && regions.length > 0) {
+            regionsJson = JSON.stringify(regions);
+        }
+        
         const query = `
-            INSERT INTO products (farmer_id, name, category_id, description, price, unit, quantity, min_order, images)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+            INSERT INTO products (farmer_id, name, category_id, description, price, unit, quantity, min_order, images, regions)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb)
             RETURNING id, farmer_id, name, price, unit, quantity, created_at
         `;
         
@@ -29,7 +34,8 @@ class Product {
             unit, 
             quantity, 
             minOrder || 1, 
-            imagesJson
+            imagesJson,
+            regionsJson
         ]);
         return result.rows[0];
     }
@@ -56,9 +62,9 @@ class Product {
             paramCount++;
         }
         
-        if (filters.region) {
-            query += ` AND u.location = $${paramCount}`;
-            values.push(filters.region);
+        if (filters.region && filters.region !== '') {
+            query += ` AND p.regions @> $${paramCount}::jsonb`;
+            values.push(JSON.stringify([filters.region]));
             paramCount++;
         }
         
@@ -109,7 +115,21 @@ class Product {
                     images = [];
                 }
             }
-            return { ...row, images };
+            
+            let regions = [];
+            if (row.regions) {
+                try {
+                    if (typeof row.regions === 'string') {
+                        regions = JSON.parse(row.regions);
+                    } else if (Array.isArray(row.regions)) {
+                        regions = row.regions;
+                    }
+                } catch (e) {
+                    regions = [];
+                }
+            }
+            
+            return { ...row, images, regions };
         });
         
         return formattedRows;
@@ -147,6 +167,20 @@ class Product {
                 }
             }
             result.rows[0].images = images;
+            
+            let regions = [];
+            if (result.rows[0].regions) {
+                try {
+                    if (typeof result.rows[0].regions === 'string') {
+                        regions = JSON.parse(result.rows[0].regions);
+                    } else if (Array.isArray(result.rows[0].regions)) {
+                        regions = result.rows[0].regions;
+                    }
+                } catch (e) {
+                    regions = [];
+                }
+            }
+            result.rows[0].regions = regions;
         }
         
         return result.rows[0];
@@ -177,17 +211,46 @@ class Product {
                     images = [];
                 }
             }
-            return { ...row, images };
+            
+            let regions = [];
+            if (row.regions) {
+                try {
+                    if (typeof row.regions === 'string') {
+                        regions = JSON.parse(row.regions);
+                    } else if (Array.isArray(row.regions)) {
+                        regions = row.regions;
+                    }
+                } catch (e) {
+                    regions = [];
+                }
+            }
+            
+            return { ...row, images, regions };
         });
         
         return formattedRows;
     }
     
-    // Mettre à jour un produit
+    // Mettre à jour un produit (avec gestion des images)
     static async update(id, farmerId, data) {
-        const { name, price, quantity, description, unit, categoryId, isAvailable } = data;
+        const { name, price, quantity, description, unit, categoryId, isAvailable, regions, images } = data;
         
-        const query = `
+        let regionsJson = null;
+        if (regions !== undefined) {
+            regionsJson = JSON.stringify(regions || []);
+        }
+        
+        let imagesJson = null;
+        if (images !== undefined) {
+            if (Array.isArray(images) && images.length > 0) {
+                const imagesArray = images.map(img => ({ url: img }));
+                imagesJson = JSON.stringify(imagesArray);
+            } else {
+                imagesJson = JSON.stringify([]);
+            }
+        }
+        
+        let query = `
             UPDATE products 
             SET name = COALESCE($1, name),
                 price = COALESCE($2, price),
@@ -197,13 +260,27 @@ class Product {
                 category_id = COALESCE($6, category_id),
                 is_available = COALESCE($7, is_available),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $8 AND farmer_id = $9
-            RETURNING *
         `;
         
-        const result = await db.query(query, [
-            name, price, quantity, description, unit, categoryId, isAvailable, id, farmerId
-        ]);
+        const params = [name, price, quantity, description, unit, categoryId, isAvailable];
+        let paramCount = 8;
+        
+        if (regionsJson !== null) {
+            query += `, regions = $${paramCount}::jsonb`;
+            params.push(regionsJson);
+            paramCount++;
+        }
+        
+        if (imagesJson !== null) {
+            query += `, images = $${paramCount}::jsonb`;
+            params.push(imagesJson);
+            paramCount++;
+        }
+        
+        query += ` WHERE id = $${paramCount} AND farmer_id = $${paramCount + 1} RETURNING *`;
+        params.push(id, farmerId);
+        
+        const result = await db.query(query, params);
         return result.rows[0];
     }
     

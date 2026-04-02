@@ -37,8 +37,17 @@ class User {
     
     // Rechercher un utilisateur par téléphone
     static async findByPhone(phone) {
+        // Nettoyer le numéro
+        let cleaned = phone.toString().replace(/\s/g, '').replace(/\D/g, '');
+        if (cleaned.startsWith('221')) {
+            cleaned = cleaned.substring(3);
+        }
+        if (cleaned.startsWith('0')) {
+            cleaned = cleaned.substring(1);
+        }
+        
         const query = 'SELECT * FROM users WHERE phone = $1';
-        const result = await db.query(query, [phone]);
+        const result = await db.query(query, [cleaned]);
         return result.rows[0];
     }
     
@@ -69,18 +78,46 @@ class User {
     }
     
     // Mettre à jour le profil
+    
     static async updateProfile(userId, data) {
-        const { fullName, location, avatarUrl } = data;
+        const { fullName, location, phone, password, avatarUrl } = data;
+        
+        const updates = [];
+        const values = [];
+        let paramCount = 1;
+        
+        if (fullName !== undefined) {
+            updates.push(`full_name = $${paramCount++}`);
+            values.push(fullName);
+        }
+        if (location !== undefined) {
+            updates.push(`location = $${paramCount++}`);
+            values.push(location);
+        }
+        if (phone !== undefined) {
+            updates.push(`phone = $${paramCount++}`);
+            values.push(phone);
+        }
+        if (password !== undefined) {
+            updates.push(`password = $${paramCount++}`);
+            values.push(password);
+        }
+        if (avatarUrl !== undefined) {
+            updates.push(`avatar_url = $${paramCount++}`);
+            values.push(avatarUrl);
+        }
+        
+        if (updates.length === 0) return null;
+        
+        values.push(userId);
         const query = `
             UPDATE users 
-            SET full_name = COALESCE($1, full_name),
-                location = COALESCE($2, location),
-                avatar_url = COALESCE($3, avatar_url),
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $4
+            SET ${updates.join(', ')}
+            WHERE id = $${paramCount}
             RETURNING id, phone, full_name, role, location, avatar_url
         `;
-        const result = await db.query(query, [fullName, location, avatarUrl, userId]);
+        
+        const result = await db.query(query, values);
         return result.rows[0];
     }
 }

@@ -12,26 +12,28 @@
 
   <header class="header-simple">
     <div class="header-container">
-      <div class="logo">
-        <div class="logo-mark">
-          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="32" height="32">
-            <circle cx="20" cy="20" r="18" stroke="#7AB648" stroke-width="1.5"/>
-            <path d="M20 29 C20 29 10 23 10 15 C10 10 15 7 20 11 C25 7 30 10 30 15 C30 23 20 29 20 29Z" fill="#7AB648" opacity="0.9"/>
-            <circle cx="20" cy="11" r="2" fill="#F5E6C8"/>
-          </svg>
-        </div>
-        <h1>Agri<span>Connect</span></h1>
-      </div>
+      <a href="index.html" style="text-decoration: none;">
+          <div class="logo">
+              <div class="logo-mark">
+                  <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+                      <circle cx="20" cy="20" r="18" stroke="#7AB648" stroke-width="1.5"/>
+                      <path d="M20 29 C20 29 10 23 10 15 C10 10 15 7 20 11 C25 7 30 10 30 15 C30 23 20 29 20 29Z" fill="#7AB648" opacity="0.9"/>
+                      <circle cx="20" cy="11" r="2" fill="#F5E6C8"/>
+                  </svg>
+              </div>
+              <h1>Agri<span>Connect</span></h1>
+          </div>
+      </a>
       
       <div class="header-actions">
         <div class="user-info">
           <span id="userNameDisplay">Chargement...</span>
           <div class="user-avatar-small">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
             </svg>
-          </div>
+        </div>
         </div>
         <button class="btn-dashboard" id="dashboardBtn">Tableau de bord</button>
         <button class="btn-logout" id="logoutBtn">Déconnexion</button>
@@ -39,6 +41,7 @@
     </div>
   </header>
 
+  <!-- Barre de recherche -->
   <div class="search-section">
     <div class="search-container">
       <input type="text" id="searchInput" placeholder="Rechercher un produit, un producteur..." class="search-input">
@@ -51,49 +54,65 @@
     </div>
   </div>
 
+  <!-- Filtres -->
   <div class="filters-simple">
     <div class="filters-container">
+      <!-- Filtre catégorie -->
       <select id="categoryFilter" class="filter-select">
         <option value="">Toutes les catégories</option>
-        <option value="legumes">Légumes</option>
-        <option value="fruits">Fruits</option>
-        <option value="cereales">Céréales</option>
-        <option value="tubercules">Tubercules</option>
-        <option value="volaille">Volaille</option>
-        <option value="laitiers">Produits laitiers</option>
-        <option value="poissons">Poissons</option>
+        <option value="1">Légumes</option>
+        <option value="2">Fruits</option>
+        <option value="3">Céréales</option>
+        <option value="4">Tubercules</option>
+        <option value="5">Volaille</option>
+        <option value="6">Produits laitiers</option>
+        <option value="7">Poissons</option>
+        <option value="8">Autres</option>
       </select>
       
-      <select id="regionFilter" class="filter-select">
-        <option value="">Toutes les régions</option>
-        <option value="Dakar">Dakar</option>
-        <option value="Thiès">Thiès</option>
-        <option value="Saint-Louis">Saint-Louis</option>
-        <option value="Diourbel">Diourbel</option>
-        <option value="Fatick">Fatick</option>
-        <option value="Kaffrine">Kaffrine</option>
-        <option value="Kaolack">Kaolack</option>
-        <option value="Kédougou">Kédougou</option>
-        <option value="Kolda">Kolda</option>
-        <option value="Louga">Louga</option>
-        <option value="Matam">Matam</option>
-        <option value="Sédhiou">Sédhiou</option>
-        <option value="Tambacounda">Tambacounda</option>
-        <option value="Ziguinchor">Ziguinchor</option>
-      </select>
+      <!-- Filtre prix -->
+      <div class="filter-price">
+        <label>Prix max: <span id="priceValue">100 000</span> FCFA</label>
+        <input type="range" id="priceFilter" min="0" max="100000" step="1000" value="100000">
+      </div>
       
+      <!-- Filtre région (dropdown avec checkboxes) -->
+      <div class="filter-region">
+        <button class="filter-select" id="filterToggle">📍 Toutes les régions ▼</button>
+        <div id="regionsDropdown" class="regions-dropdown" style="display: none;">
+          <label><input type="checkbox" value="Dakar"> Dakar</label>
+          <label><input type="checkbox" value="Thiès"> Thiès</label>
+          <label><input type="checkbox" value="Saint-Louis"> Saint-Louis</label>
+          <label><input type="checkbox" value="Diourbel"> Diourbel</label>
+          <label><input type="checkbox" value="Fatick"> Fatick</label>
+          <label><input type="checkbox" value="Kaffrine"> Kaffrine</label>
+          <label><input type="checkbox" value="Kaolack"> Kaolack</label>
+          <label><input type="checkbox" value="Kédougou"> Kédougou</label>
+          <label><input type="checkbox" value="Kolda"> Kolda</label>
+          <label><input type="checkbox" value="Louga"> Louga</label>
+          <label><input type="checkbox" value="Matam"> Matam</label>
+          <label><input type="checkbox" value="Sédhiou"> Sédhiou</label>
+          <label><input type="checkbox" value="Tambacounda"> Tambacounda</label>
+          <label><input type="checkbox" value="Ziguinchor"> Ziguinchor</label>
+        </div>
+      </div>
+      
+      <!-- Tri -->
       <select id="sortFilter" class="filter-select">
         <option value="recent">Plus récents</option>
         <option value="price_asc">Prix croissant</option>
         <option value="price_desc">Prix décroissant</option>
       </select>
+      
+      <!-- Bouton réinitialiser -->
+      <button class="btn-reset-filters" id="resetFiltersBtn">Réinitialiser</button>
     </div>
   </div>
 
   <main class="catalogue-main">
     <div class="products-header">
       <h2>Produits agricoles du Sénégal</h2>
-      <p>Directement des producteurs locaux</p>
+      <p>Le meilleur des producteurs locaux, livré chez vous.</p>
     </div>
     
     <div class="products-grid" id="productsGrid">
@@ -104,6 +123,7 @@
     </div>
   </main>
 
+  <!-- Panier flottant -->
   <div class="cart-float" id="cartFloat">
     <button class="cart-btn-float" id="cartBtn">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -115,6 +135,7 @@
     </button>
   </div>
 
+  <!-- Modal panier -->
   <div class="cart-modal" id="cartModal">
     <div class="cart-modal-content">
       <div class="cart-modal-header">
@@ -134,7 +155,37 @@
     </div>
   </div>
 
+  <!-- Modal Détails du produit -->
+  <div id="productDetailModal" class="product-modal" style="display: none;">
+    <div class="product-modal-content">
+        <div class="product-modal-header">
+            <h3 id="detailProductName">Détails du produit</h3>
+            <button class="product-modal-close" id="closeDetailModal">&times;</button>
+        </div>
+        <div class="product-modal-body">
+            <div class="detail-image">
+                <img id="detailProductImage" src="" alt="Image du produit">
+            </div>
+            <div class="detail-info">
+                <p class="detail-price"><strong id="detailProductPrice">0 FCFA</strong> <span id="detailProductUnit">/kg</span></p>
+                <p class="detail-farmer"><strong>Producteur :</strong> <span id="detailProductFarmer"></span></p>
+                <p class="detail-location"><strong>Localisation :</strong> <span id="detailProductLocation"></span></p>
+                <p class="detail-regions"><strong>Disponible a :</strong> <span id="detailProductRegions"></span></p>
+                <p class="detail-stock"><strong>Stock disponible :</strong> <span id="detailProductStock"></span></p>
+                <p class="detail-description"><strong>Description :</strong> <span id="detailProductDescription"></span></p>
+                <p class="detail-views"><strong>Vues :</strong> <span id="detailProductViews"></span></p>
+                <p class="detail-date"><strong>Ajouté le :</strong> <span id="detailProductDate"></span></p>
+            </div>
+        </div>
+        <div class="product-modal-footer">
+            <button class="btn-add-cart-detail" id="detailAddToCart">Ajouter au panier</button>
+            <button class="btn-close-detail" id="closeDetailModalBtn">Fermer</button>
+        </div>
+    </div>
+  </div>
+
   <script src="js/api.js"></script>
+  <script src="js/cart.js"></script>
   <script src="js/catalogue.js"></script>
 </body>
 </html>

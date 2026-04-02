@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const roleMapping = {
       'acheteur': 'buyer',
       'agriculteur': 'farmer',
-      'grossiste': 'buyer'
+      'grossiste': 'wholesaler'
     };
     
     const backendRole = roleMapping[role] || 'buyer';

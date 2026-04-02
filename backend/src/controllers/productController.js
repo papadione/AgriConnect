@@ -8,7 +8,7 @@ exports.createProduct = async (req, res) => {
             return res.status(403).json({ erreur: 'Seuls les agriculteurs peuvent ajouter des produits' });
         }
         
-        const { name, categoryId, description, price, unit, quantity, minOrder, images } = req.body;
+        const { name, categoryId, description, price, unit, quantity, minOrder, images, regions } = req.body;
         
         if (!name || !price || !unit || !quantity) {
             return res.status(400).json({ erreur: 'Veuillez remplir tous les champs obligatoires' });
@@ -31,7 +31,8 @@ exports.createProduct = async (req, res) => {
             unit,
             quantity,
             minOrder: minOrder || 1,
-            images: imagesArray
+            images: imagesArray,
+            regions: regions || []
         });
         
         res.status(201).json({
@@ -77,6 +78,7 @@ exports.getAllProducts = async (req, res) => {
             quantite: p.quantity,
             description: p.description,
             images: p.images,
+            regions: p.regions || [],  // ← AJOUTER CETTE LIGNE
             producteur: {
                 nom: p.farmer_name,
                 localisation: p.farmer_location
@@ -119,6 +121,7 @@ exports.getProductById = async (req, res) => {
                 quantite: product.quantity,
                 description: product.description,
                 images: product.images,
+                regions: product.regions || [],
                 producteur: {
                     nom: product.farmer_name,
                     telephone: product.farmer_phone,
@@ -151,6 +154,7 @@ exports.getFarmerProducts = async (req, res) => {
             quantite: p.quantity,
             description: p.description,
             images: p.images,
+            regions: p.regions || [],  // ← AJOUTER CETTE LIGNE
             categorie: p.category_name,
             disponible: p.is_available,
             vues: p.views,
@@ -172,7 +176,7 @@ exports.getFarmerProducts = async (req, res) => {
 exports.updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, price, quantity, description, unit, categoryId, isAvailable } = req.body;
+        const { name, price, quantity, description, unit, categoryId, isAvailable, regions, images } = req.body;
         
         const product = await Product.update(id, req.user.id, {
             name,
@@ -181,7 +185,9 @@ exports.updateProduct = async (req, res) => {
             description,
             unit,
             categoryId,
-            isAvailable
+            isAvailable,
+            regions,
+            images  // ← Ajouter cette ligne
         });
         
         if (!product) {
@@ -196,7 +202,8 @@ exports.updateProduct = async (req, res) => {
                 prix: product.price,
                 unite: product.unit,
                 quantite: product.quantity,
-                disponible: product.is_available
+                disponible: product.is_available,
+                regions: product.regions || []
             }
         });
         

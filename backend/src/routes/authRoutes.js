@@ -25,7 +25,7 @@ const validationInscription = [
         .withMessage('Numéro de téléphone sénégalais invalide (ex: 77 123 45 67)'),
     body('password').isLength({ min: 6 }).withMessage('Mot de passe minimum 6 caractères'),
     body('fullName').notEmpty().withMessage('Nom complet requis'),
-    body('role').isIn(['buyer', 'farmer']).withMessage('Le rôle doit être "acheteur" ou "agriculteur"'),
+    body('role').isIn(['buyer', 'farmer', 'wholesaler']).withMessage('Le rôle doit être "acheteur" ou "agriculteur" ou "Grossiste"'),
     body('location').optional()
 ];
 

@@ -49,10 +49,12 @@
     <div class="dashboard-tabs">
       <button class="tab-dash active" data-tab="orders">Commandes</button>
       <button class="tab-dash" data-tab="products" id="farmerTab">Mes produits</button>
+      <button class="tab-dash" data-tab="profile">Mon profil</button>
     </div>
 
     <div class="dashboard-content">
       
+      <!-- Onglet Commandes -->
       <div class="tab-pane active" id="ordersPane">
         <div class="section-header">
           <h3>Historique des commandes</h3>
@@ -65,6 +67,7 @@
         </div>
       </div>
       
+      <!-- Onglet Mes produits -->
       <div class="tab-pane" id="productsPane">
         <div class="section-header">
           <h3>Mes produits</h3>
@@ -111,11 +114,104 @@
               <option value="8">Autres</option>
             </select>
           </div>
+          <div class="form-group">
+            <label>Image du produit</label>
+            <input type="file" id="productImage" accept="image/*" class="form-input">
+            <div id="imagePreview" style="margin-top: 10px;"></div>
+          </div>
           <div class="form-actions">
             <button class="btn-cancel" id="cancelAddProduct">Annuler</button>
             <button class="btn-save" id="saveProductBtn">Publier</button>
           </div>
         </div>
+      </div>
+      
+      <!-- Onglet Mon profil -->
+      <div class="tab-pane" id="profilePane">
+          <div class="section-header">
+              <h3>Mes informations personnelles</h3>
+              <button class="btn-edit-profile" id="editProfileBtn">✏️ Modifier</button>
+          </div>
+          
+          <!-- Affichage du profil -->
+          <div id="profileView">
+              <div class="profile-detail">
+                  <div class="detail-row">
+                      <span class="detail-label">Nom complet :</span>
+                      <span class="detail-value" id="profileFullName">-</span>
+                  </div>
+                  <div class="detail-row">
+                      <span class="detail-label">Téléphone :</span>
+                      <span class="detail-value" id="profilePhone">-</span>
+                  </div>
+                  <div class="detail-row">
+                      <span class="detail-label">Rôle :</span>
+                      <span class="detail-value" id="profileRoleDisplay">-</span>
+                  </div>
+                  <div class="detail-row">
+                      <span class="detail-label">Localisation :</span>
+                      <span class="detail-value" id="profileLocationDisplay">-</span>
+                  </div>
+              </div>
+          </div>
+          
+          <!-- Formulaire de modification (caché par défaut) -->
+          <div id="profileForm" style="display: none;">
+              <div class="form-group">
+                  <label>Nom complet</label>
+                  <input type="text" id="editFullName" class="form-input" placeholder="Laissez vide pour ne pas modifier">
+              </div>
+              <div class="form-group">
+                  <label>Téléphone</label>
+                  <div class="input-wrap phone-wrap">
+                      <span class="phone-prefix">+221</span>
+                      <input type="tel" id="editPhone" placeholder="77 123 45 67" class="form-input">
+                  </div>
+                  <small>Laissez vide pour ne pas modifier</small>
+              </div>
+              <div class="form-group">
+                  <label>Localisation (région)</label>
+                  <select id="editLocation" class="form-input">
+                      <option value="">Sélectionnez une région</option>
+                      <option value="Dakar">Dakar</option>
+                      <option value="Thiès">Thiès</option>
+                      <option value="Saint-Louis">Saint-Louis</option>
+                      <option value="Diourbel">Diourbel</option>
+                      <option value="Fatick">Fatick</option>
+                      <option value="Kaffrine">Kaffrine</option>
+                      <option value="Kaolack">Kaolack</option>
+                      <option value="Kédougou">Kédougou</option>
+                      <option value="Kolda">Kolda</option>
+                      <option value="Louga">Louga</option>
+                      <option value="Matam">Matam</option>
+                      <option value="Sédhiou">Sédhiou</option>
+                      <option value="Tambacounda">Tambacounda</option>
+                      <option value="Ziguinchor">Ziguinchor</option>
+                  </select>
+              </div>
+              
+              <div class="form-divider">
+                  <span>Changer de mot de passe (optionnel)</span>
+              </div>
+              
+              <div class="form-group">
+                  <label>Mot de passe actuel</label>
+                  <input type="password" id="editCurrentPassword" class="form-input" placeholder="Requis pour changer le mot de passe">
+              </div>
+              <div class="form-group">
+                  <label>Nouveau mot de passe</label>
+                  <input type="password" id="editNewPassword" class="form-input" placeholder="Minimum 6 caractères">
+              </div>
+              <div class="form-group">
+                  <label>Confirmer le nouveau mot de passe</label>
+                  <input type="password" id="editConfirmPassword" class="form-input" placeholder="">
+              </div>
+              
+              <div class="form-actions">
+                  <button class="btn-cancel" id="cancelProfileEdit">Annuler</button>
+                  <button class="btn-save" id="saveProfileBtn">Enregistrer</button>
+              </div>
+          </div>
       </div>
       
     </div>

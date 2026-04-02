@@ -1,12 +1,14 @@
 // Contrôleur d'authentification
 const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
+const bcrypt = require('bcryptjs');
 
 // Fonction utilitaire pour traduire les rôles en français
 const traduireRole = (role) => {
     const roles = {
         'farmer': 'agriculteur',
         'buyer': 'acheteur',
+        'wholesaler': 'grossiste',
         'admin': 'administrateur'
     };
     return roles[role] || role;
@@ -110,13 +112,51 @@ const getProfile = async (req, res) => {
 // Mettre à jour le profil
 const updateProfile = async (req, res) => {
     try {
-        const { fullName, location, avatarUrl } = req.body;
+        const { fullName, location, phone, currentPassword, newPassword } = req.body;
         
-        const user = await User.updateProfile(req.user.id, {
-            fullName,
-            location,
-            avatarUrl
-        });
+        console.log('Données reçues pour mise à jour:', { fullName, location, phone });
+        
+        const updateData = {};
+        if (fullName !== undefined && fullName !== '') updateData.fullName = fullName;
+        if (location !== undefined && location !== '') updateData.location = location;
+        
+        // Si changement de téléphone
+        if (phone !== undefined && phone !== '') {
+            // Nettoyer le numéro (supprimer espaces et 221)
+            let cleanedPhone = phone.toString().replace(/\s/g, '').replace(/\D/g, '');
+            if (cleanedPhone.startsWith('221')) {
+                cleanedPhone = cleanedPhone.substring(3);
+            }
+            if (cleanedPhone.startsWith('0')) {
+                cleanedPhone = cleanedPhone.substring(1);
+            }
+            
+            // Vérifier que le numéro n'est pas déjà utilisé par UN AUTRE utilisateur
+            const existingUser = await User.findByPhone(cleanedPhone);
+            
+            if (existingUser && existingUser.id !== req.user.id) {
+                return res.status(400).json({ erreur: 'Ce numéro de téléphone est déjà utilisé par un autre compte' });
+            }
+            
+            // Stocker sans le 221
+            updateData.phone = cleanedPhone;
+        }
+        
+        // Si changement de mot de passe
+        if (currentPassword && newPassword) {
+            const user = await User.findById(req.user.id);
+            const isValid = await bcrypt.compare(currentPassword, user.password);
+            if (!isValid) {
+                return res.status(401).json({ erreur: 'Mot de passe actuel incorrect' });
+            }
+            updateData.password = await bcrypt.hash(newPassword, 10);
+        }
+        
+        const user = await User.updateProfile(req.user.id, updateData);
+        
+        if (!user) {
+            return res.status(404).json({ erreur: 'Utilisateur non trouvé' });
+        }
         
         res.json({
             succes: true,
@@ -125,18 +165,17 @@ const updateProfile = async (req, res) => {
                 telephone: user.phone,
                 nomComplet: user.full_name,
                 role: traduireRole(user.role),
-                localisation: user.location,
-                avatarUrl: user.avatar_url
+                localisation: user.location
             }
         });
         
     } catch (error) {
         console.error('Erreur mise à jour profil:', error);
-        res.status(500).json({ erreur: 'Erreur lors de la mise à jour' });
+        res.status(500).json({ erreur: 'Erreur lors de la mise à jour du profil' });
     }
 };
 
-// EXPORT - IMPORTANT: Assure-toi que c'est la dernière ligne du fichier
+// EXPORT - Toutes les fonctions sont maintenant des const
 module.exports = {
     register,
     login,
