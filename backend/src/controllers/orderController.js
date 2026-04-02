@@ -11,6 +11,12 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({ erreur: 'Veuillez remplir tous les champs obligatoires' });
         }
         
+        // L'acheteur est l'utilisateur connecté
+        const buyerId = req.user.id;
+        
+        console.log('Création commande - Acheteur ID:', buyerId);
+        console.log('Création commande - Producteur ID:', farmerId);
+        
         // Calculer le total
         let totalAmount = 0;
         const validatedItems = [];
@@ -37,9 +43,9 @@ exports.createOrder = async (req, res) => {
             });
         }
         
-        const deliveryFee = 0; // À calculer selon la distance
+        const deliveryFee = 0;
         
-        const order = await Order.create(req.user.id, {
+        const order = await Order.create(buyerId, {
             farmerId,
             items: validatedItems,
             totalAmount: totalAmount + deliveryFee,
@@ -134,15 +140,35 @@ exports.updateOrderStatus = async (req, res) => {
             return res.status(400).json({ erreur: 'Statut invalide' });
         }
         
-        const order = await Order.updateStatus(id, status, req.user.id, req.user.role);
+        // Récupérer la commande
+        const order = await Order.findById(id);
         
         if (!order) {
-            return res.status(404).json({ erreur: 'Commande non trouvée ou vous n\'avez pas les droits' });
+            return res.status(404).json({ erreur: 'Commande non trouvée' });
         }
+        
+        // Vérifier les droits
+        const isFarmer = req.user.role === 'farmer';
+        const isBuyer = req.user.role === 'buyer' && order.buyer_id === req.user.id;
+        
+        if (!isFarmer && !isBuyer && req.user.role !== 'admin') {
+            return res.status(403).json({ erreur: 'Accès non autorisé' });
+        }
+        
+        // L'acheteur ne peut que annuler une commande en attente
+        if (isBuyer && status !== 'cancelled') {
+            return res.status(403).json({ erreur: 'Vous ne pouvez que annuler votre commande' });
+        }
+        
+        if (isBuyer && order.status !== 'pending') {
+            return res.status(403).json({ erreur: 'Vous ne pouvez annuler qu\'une commande en attente' });
+        }
+        
+        const updatedOrder = await Order.updateStatus(id, status, req.user.id, req.user.role);
         
         res.json({
             succes: true,
-            commande: order
+            commande: updatedOrder
         });
         
     } catch (error) {

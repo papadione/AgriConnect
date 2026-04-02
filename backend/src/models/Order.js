@@ -17,14 +17,15 @@ class Order {
         const { farmerId, items, totalAmount, deliveryFee, deliveryAddress, deliveryPhone, notes } = data;
         const orderNumber = this.generateOrderNumber();
         
-        // Démarrer une transaction
+        console.log('Création commande - Buyer ID dans model:', buyerId);
+        console.log('Création commande - Farmer ID dans model:', farmerId);
+        
         await db.query('BEGIN');
         
         try {
-            // Créer la commande
             const orderQuery = `
-                INSERT INTO orders (order_number, buyer_id, farmer_id, total_amount, delivery_fee, delivery_address, delivery_phone, notes)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                INSERT INTO orders (order_number, buyer_id, farmer_id, total_amount, delivery_fee, delivery_address, delivery_phone, notes, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
                 RETURNING id, order_number, total_amount, status, created_at
             `;
             
@@ -35,7 +36,6 @@ class Order {
             
             const order = orderResult.rows[0];
             
-            // Créer les détails de commande
             for (const item of items) {
                 const itemQuery = `
                     INSERT INTO order_items (order_id, product_id, quantity, unit_price, subtotal)
@@ -45,7 +45,6 @@ class Order {
                     order.id, item.productId, item.quantity, item.unitPrice, item.subtotal
                 ]);
                 
-                // Mettre à jour la quantité du produit
                 await db.query(
                     'UPDATE products SET quantity = quantity - $1 WHERE id = $2',
                     [item.quantity, item.productId]
@@ -120,21 +119,22 @@ class Order {
     
     // Mettre à jour le statut d'une commande
     static async updateStatus(orderId, status, userId, role) {
-        // Vérifier que l'utilisateur a le droit
         let query;
         let params;
         
-        if (role === 'farmer') {
-            query = `UPDATE orders SET status = $1 WHERE id = $2 AND farmer_id = $3 RETURNING *`;
+        // L'acheteur ne peut modifier que ses propres commandes
+        if (role === 'buyer') {
+            query = `UPDATE orders SET status = $1 WHERE id = $2 AND buyer_id = $3 RETURNING *`;
             params = [status, orderId, userId];
         } else {
+            // L'agriculteur ou admin peut modifier toutes les commandes de ses produits
             query = `UPDATE orders SET status = $1 WHERE id = $2 RETURNING *`;
             params = [status, orderId];
         }
         
         const result = await db.query(query, params);
         
-        if (status === 'delivered') {
+        if (status === 'delivered' && result.rows.length > 0) {
             await db.query('UPDATE orders SET delivered_at = CURRENT_TIMESTAMP WHERE id = $1', [orderId]);
         }
         

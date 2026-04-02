@@ -54,6 +54,7 @@ exports.createProduct = async (req, res) => {
 };
 
 // Lister tous les produits
+
 exports.getAllProducts = async (req, res) => {
     try {
         const { categorie, region, prixMax, recherche, tri, page = 1, limit = 20 } = req.query;
@@ -78,8 +79,8 @@ exports.getAllProducts = async (req, res) => {
             quantite: p.quantity,
             description: p.description,
             images: p.images,
-            regions: p.regions || [],  // ← AJOUTER CETTE LIGNE
             producteur: {
+                id: p.farmer_id,        // ← AJOUTER CETTE LIGNE
                 nom: p.farmer_name,
                 localisation: p.farmer_location
             },
@@ -121,8 +122,8 @@ exports.getProductById = async (req, res) => {
                 quantite: product.quantity,
                 description: product.description,
                 images: product.images,
-                regions: product.regions || [],
                 producteur: {
+                    id: product.farmer_id,      // ← AJOUTER CETTE LIGNE
                     nom: product.farmer_name,
                     telephone: product.farmer_phone,
                     localisation: product.farmer_location
@@ -154,7 +155,7 @@ exports.getFarmerProducts = async (req, res) => {
             quantite: p.quantity,
             description: p.description,
             images: p.images,
-            regions: p.regions || [],  // ← AJOUTER CETTE LIGNE
+            farmer_id: p.farmer_id,     // ← AJOUTER CETTE LIGNE
             categorie: p.category_name,
             disponible: p.is_available,
             vues: p.views,

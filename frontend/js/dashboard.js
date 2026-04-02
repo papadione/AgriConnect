@@ -114,6 +114,7 @@ function checkAuth() {
     const user = localStorage.getItem('user');
     
     if (!token || !user) {
+        localStorage.removeItem('agriconnect_cart'); // Vider le panier
         window.location.href = 'index.html';
         return null;
     }
@@ -160,6 +161,8 @@ function setupLogout() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
+            // Vider le panier avant déconnexion
+            localStorage.removeItem('agriconnect_cart');
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = 'index.html';
@@ -242,22 +245,87 @@ async function loadOrders() {
 
 function displayOrders(orders) {
     const ordersList = document.getElementById('ordersList');
+    const userData = checkAuth();
+    const isFarmer = userData?.user.role === 'agriculteur';
+    const isBuyer = userData?.user.role === 'acheteur';
     
-    ordersList.innerHTML = orders.map(order => `
-        <div class="order-card">
-            <div class="order-header">
-                <span class="order-number">${order.order_number}</span>
-                <span class="order-status ${order.status}">${getStatusText(order.status)}</span>
+    if (!orders || orders.length === 0) {
+        ordersList.innerHTML = '<p class="empty-message">Aucune commande pour le moment</p>';
+        return;
+    }
+    
+    ordersList.innerHTML = orders.map(order => {
+        let actions = '';
+        
+        if (isFarmer) {
+            // Actions pour l'agriculteur
+            if (order.status === 'pending') {
+                actions = `
+                    <div class="order-actions">
+                        <button class="btn-confirm-order" data-id="${order.id}" data-status="confirmed">✅ Confirmer</button>
+                        <button class="btn-cancel-order" data-id="${order.id}" data-status="cancelled">❌ Annuler</button>
+                    </div>
+                `;
+            } else if (order.status === 'confirmed') {
+                actions = `
+                    <div class="order-actions">
+                        <button class="btn-prepare-order" data-id="${order.id}" data-status="preparing">📦 Préparer</button>
+                    </div>
+                `;
+            } else if (order.status === 'preparing') {
+                actions = `
+                    <div class="order-actions">
+                        <button class="btn-ship-order" data-id="${order.id}" data-status="shipped">🚚 Expédier</button>
+                    </div>
+                `;
+            } else if (order.status === 'shipped') {
+                actions = `
+                    <div class="order-actions">
+                        <button class="btn-deliver-order" data-id="${order.id}" data-status="delivered">✅ Livrer</button>
+                    </div>
+                `;
+            }
+        } else if (isBuyer) {
+            // Actions pour l'acheteur (uniquement annulation si en attente)
+            if (order.status === 'pending') {
+                actions = `
+                    <div class="order-actions">
+                        <button class="btn-cancel-order" data-id="${order.id}" data-status="cancelled">❌ Annuler ma commande</button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Afficher le nom du producteur ou de l'acheteur selon le rôle
+        const otherParty = isFarmer 
+            ? `<p><strong>Acheteur:</strong> ${order.buyer_name || 'Client'}</p>`
+            : `<p><strong>Producteur:</strong> ${order.farmer_name || 'Producteur'}</p>`;
+        
+        return `
+            <div class="order-card">
+                <div class="order-header">
+                    <span class="order-number">${order.order_number}</span>
+                    <span class="order-status ${order.status}">${getStatusText(order.status)}</span>
+                </div>
+                <div class="order-info">
+                    <p><strong>Date:</strong> ${new Date(order.created_at).toLocaleDateString('fr-FR')}</p>
+                    <p><strong>Total:</strong> ${Math.floor(order.total_amount).toLocaleString()} FCFA</p>
+                    ${otherParty}
+                    ${order.delivery_address ? `<p><strong>Adresse de livraison:</strong> ${order.delivery_address}</p>` : ''}
+                </div>
+                ${actions}
             </div>
-            <div class="order-info">
-                <p>Date: ${new Date(order.created_at).toLocaleDateString('fr-FR')}</p>
-                <p>Total: ${Math.floor(order.total_amount)} FCFA</p>
-            </div>
-            <div class="order-total">
-                <strong>${Math.floor(order.total_amount)} FCFA</strong>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
+    
+    // Ajouter les événements aux boutons
+    document.querySelectorAll('.btn-confirm-order, .btn-prepare-order, .btn-ship-order, .btn-deliver-order, .btn-cancel-order').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const orderId = btn.dataset.id;
+            const newStatus = btn.dataset.status;
+            updateOrderStatus(orderId, newStatus);
+        });
+    });
 }
 
 function getStatusText(status) {
@@ -1190,6 +1258,43 @@ async function saveEditProduct(productId, modal) {
     } finally {
         btn.textContent = originalText;
         btn.disabled = false;
+    }
+}
+
+// Mettre à jour le statut d'une commande
+async function updateOrderStatus(orderId, newStatus) {
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`${API_URL}/commandes/${orderId}/statut`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            let message = '';
+            switch(newStatus) {
+                case 'confirmed': message = 'Commandes confirmée'; break;
+                case 'preparing': message = 'Commande en préparation'; break;
+                case 'shipped': message = 'Commande expédiée'; break;
+                case 'delivered': message = 'Commande livrée'; break;
+                case 'cancelled': message = 'Commande annulée'; break;
+                default: message = 'Statut mis à jour';
+            }
+            showNotification(message, 'success', 'Commande');
+            loadOrders();
+        } else {
+            showNotification(data.erreur || 'Erreur lors de la mise à jour', 'error', 'Erreur');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('Erreur de connexion au serveur', 'error', 'Connexion');
     }
 }
 

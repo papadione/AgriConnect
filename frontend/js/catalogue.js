@@ -23,6 +23,7 @@ function checkAuth() {
     const user = localStorage.getItem('user');
     
     if (!token || !user) {
+        localStorage.removeItem('agriconnect_cart'); // Vider le panier
         window.location.href = 'index.html';
         return null;
     }
@@ -52,6 +53,8 @@ function setupLogout() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
+            // Vider le panier avant déconnexion
+            localStorage.removeItem('agriconnect_cart');
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = 'index.html';
@@ -213,6 +216,13 @@ async function loadProducts() {
 }
 
 function displayProducts(products) {
+    console.log('Produits reçus de l\'API:', products);
+    
+    // Afficher les IDs des producteurs pour chaque produit
+    products.forEach(product => {
+        console.log(`Produit: ${product.nom}, Producteur ID:`, product.producteur?.id || product.farmer_id);
+    });
+    
     const productsGrid = document.getElementById('productsGrid');
     
     if (!products || products.length === 0) {
@@ -232,8 +242,12 @@ function displayProducts(products) {
             ? `📍 ${product.regions.join(', ')}` 
             : '📍 Livraison nationale';
         
+        // Récupérer l'ID du producteur
+        const farmerId = product.producteur?.id || product.farmer_id;
+        console.log(`Affichage carte: ${product.nom}, FarmerId: ${farmerId}`);
+        
         return `
-            <div class="product-card" data-id="${product.id}">
+            <div class="product-card" data-id="${product.id}" data-farmer-id="${farmerId || ''}">
                 <div class="product-image">
                     ${imageUrl ? 
                         `<img src="${imageUrl}" alt="${product.nom}" style="width: 100%; height: 100%; object-fit: cover;">` : 
@@ -258,7 +272,6 @@ function displayProducts(products) {
         card.addEventListener('click', (e) => {
             if (!e.target.classList.contains('btn-add-cart')) {
                 const productId = card.dataset.id;
-                console.log('Clic produit ID:', productId);
                 openProductDetail(productId);
             }
         });
@@ -390,6 +403,15 @@ function addToCart(productId) {
     const productPriceText = productCard.querySelector('.product-price')?.textContent || '0';
     const productPrice = parseInt(productPriceText.replace(/\D/g, ''));
     const productUnit = productCard.querySelector('.product-price small')?.textContent?.replace('/', '') || 'kg';
+    const farmerName = productCard.querySelector('.product-farmer')?.textContent || '';
+    
+    // Extraire l'ID du producteur (à ajouter dans le HTML)
+    let farmerId = productCard.dataset.farmerId;
+    
+    // Alternative: récupérer depuis l'attribut data-farmer-id
+    if (!farmerId) {
+        farmerId = productCard.getAttribute('data-farmer-id');
+    }
     
     let productImage = '';
     const productImageElem = productCard.querySelector('.product-image img');
@@ -402,7 +424,9 @@ function addToCart(productId) {
         name: productName,
         price: productPrice,
         unit: productUnit,
-        image: productImage
+        image: productImage,
+        farmerId: farmerId,
+        farmerName: farmerName
     });
 }
 
@@ -452,6 +476,74 @@ function setupAvatarRedirect() {
         });
     } else {
         console.log('Avatar NON trouvé - vérifie le HTML');
+    }
+}
+
+// Créer une commande depuis le panier
+async function createOrder() {
+    const token = localStorage.getItem('token');
+    const userData = checkAuth();
+    
+    if (!userData) return;
+    
+    const items = Cart.getItems();
+    
+    if (items.length === 0) {
+        showNotification('Votre panier est vide', 'warning', 'Panier');
+        return;
+    }
+    
+    // Vérifier que tous les produits sont du même producteur
+    const farmerId = items[0].farmerId;
+    const sameFarmer = items.every(item => item.farmerId === farmerId);
+    
+    if (!sameFarmer) {
+        showNotification('Vous ne pouvez commander que des produits du même producteur', 'warning', 'Commande');
+        return;
+    }
+    
+    if (!farmerId) {
+        showNotification('Impossible d\'identifier le producteur', 'error', 'Erreur');
+        return;
+    }
+    
+    const deliveryAddress = prompt('Votre adresse de livraison :');
+    if (!deliveryAddress) return;
+    
+    const deliveryPhone = prompt('Votre numéro de téléphone :');
+    if (!deliveryPhone) return;
+    
+    const orderItems = items.map(item => ({
+        productId: item.id,
+        quantity: item.quantity
+    }));
+    
+    try {
+        const response = await fetch(`${API_URL}/commandes`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                farmerId: parseInt(farmerId),
+                items: orderItems,
+                deliveryAddress: deliveryAddress,
+                deliveryPhone: deliveryPhone
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showNotification('Commande créée avec succès !', 'success', 'Commande');
+            Cart.clear();
+        } else {
+            showNotification(data.erreur || 'Erreur lors de la création', 'error', 'Erreur');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('Erreur de connexion au serveur', 'error', 'Connexion');
     }
 }
 
