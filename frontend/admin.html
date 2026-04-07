@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriConnect Sénégal — Administration</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/app.css">
+    <style>
+        .admin-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .admin-tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+        .admin-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+        .admin-tab.active {
+            color: var(--leaf);
+            border-bottom: 2px solid var(--leaf);
+        }
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .admin-table th,
+        .admin-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .admin-table th {
+            background: var(--cream);
+            font-weight: 600;
+            color: var(--soil);
+        }
+        .admin-table tr:hover {
+            background: var(--cream);
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .badge-admin { background: #E74C3C; color: white; }
+        .badge-farmer { background: #27AE60; color: white; }
+        .badge-buyer { background: #3498DB; color: white; }
+        .badge-wholesaler { background: #F39C12; color: white; }
+        .badge-pending { background: #F39C12; color: white; }
+        .badge-confirmed { background: #3498DB; color: white; }
+        .badge-shipped { background: #9B59B6; color: white; }
+        .badge-delivered { background: #27AE60; color: white; }
+        .badge-cancelled { background: #E74C3C; color: white; }
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            margin: 0 0.25rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .action-btn.edit { color: #3498DB; }
+        .action-btn.delete { color: #E74C3C; }
+        .action-btn.ban { color: #F39C12; }
+        .action-btn:hover { background: var(--cream); transform: scale(1.1); }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--leaf);
+        }
+        .stat-label {
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+        .search-input {
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 250px;
+            margin-bottom: 1rem;
+        }
+        .btn-add {
+            background: var(--leaf);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+        .btn-add:hover {
+            background: var(--leaf-dark);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header-simple">
+        <div class="header-container">
+            <div class="logo">
+                <div class="logo-mark">
+                    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+                        <circle cx="20" cy="20" r="18" stroke="#7AB648" stroke-width="1.5"/>
+                        <path d="M20 29 C20 29 10 23 10 15 C10 10 15 7 20 11 C25 7 30 10 30 15 C30 23 20 29 20 29Z" fill="#7AB648" opacity="0.9"/>
+                        <circle cx="20" cy="11" r="2" fill="#F5E6C8"/>
+                    </svg>
+                </div>
+                <h1>Agri<span>Connect</span> Admin</h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn-logout" id="logoutBtn">Déconnexion</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="admin-container">
+        <div class="admin-header">
+            <h2>👑 Panneau d'administration</h2>
+            <div id="adminInfo"></div>
+        </div>
+
+        <div class="admin-tabs">
+            <button class="admin-tab active" data-tab="dashboard">📊 Tableau de bord</button>
+            <button class="admin-tab" data-tab="users">👥 Utilisateurs</button>
+            <button class="admin-tab" data-tab="products">🌾 Produits</button>
+            <button class="admin-tab" data-tab="orders">📦 Commandes</button>
+        </div>
+
+        <!-- Onglet Tableau de bord -->
+        <div id="tab-dashboard" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalUsers">0</div>
+                    <div class="stat-label">Utilisateurs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalFarmers">0</div>
+                    <div class="stat-label">Agriculteurs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalBuyers">0</div>
+                    <div class="stat-label">Acheteurs</div>
+                </div>
+                <!-- AJOUTER CETTE CARTE POUR LES GROSSISTES -->
+                <div class="stat-card">
+                    <div class="stat-number" id="totalWholesalers">0</div>
+                    <div class="stat-label">Grossistes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalProducts">0</div>
+                    <div class="stat-label">Produits</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalOrders">0</div>
+                    <div class="stat-label">Commandes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalRevenue">0 FCFA</div>
+                    <div class="stat-label">Chiffre d'affaires</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Utilisateurs -->
+        <div id="tab-users" class="tab-content" style="display: none;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                <input type="text" id="searchUser" placeholder="Rechercher un utilisateur..." class="search-input">
+                <button class="btn-add" id="addUserBtn">+ Ajouter un utilisateur</button>
+            </div>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nom</th>
+                        <th>Téléphone</th>
+                        <th>Rôle</th>
+                        <th>Localisation</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr><td colspan="7">Chargement...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Onglet Produits -->
+        <div id="tab-products" class="tab-content" style="display: none;">
+            <div style="margin-bottom: 1rem;">
+                <input type="text" id="searchProduct" placeholder="Rechercher un produit..." class="search-input">
+            </div>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nom</th>
+                        <th>Producteur</th>
+                        <th>Prix</th>
+                        <th>Stock</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="productsTableBody">
+                    <tr><td colspan="7">Chargement...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Onglet Commandes -->
+        <div id="tab-orders" class="tab-content" style="display: none;">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Numéro</th>
+                        <th>Acheteur</th>
+                        <th>Producteur</th>
+                        <th>Total</th>
+                        <th>Statut</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    <tr><td colspan="8">Chargement...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal utilisateur -->
+    <div id="userModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="userModalTitle">Ajouter un utilisateur</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label>Nom complet</label>
+                    <input type="text" id="userFullName" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Téléphone</label>
+                    <input type="tel" id="userPhone" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Mot de passe</label>
+                    <input type="password" id="userPassword" class="form-input" placeholder="Laisser vide pour ne pas modifier">
+                </div>
+                <div class="form-group">
+                    <label>Rôle</label>
+                    <select id="userRole" class="form-input">
+                        <option value="buyer">Acheteur</option>
+                        <option value="farmer">Agriculteur</option>
+                        <option value="wholesaler">Grossiste</option>
+                        <option value="admin">Administrateur</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Localisation</label>
+                    <select id="userLocation" class="form-input">
+                        <option value="Dakar">Dakar</option>
+                        <option value="Thiès">Thiès</option>
+                        <option value="Saint-Louis">Saint-Louis</option>
+                        <option value="Diourbel">Diourbel</option>
+                        <option value="Fatick">Fatick</option>
+                        <option value="Kaffrine">Kaffrine</option>
+                        <option value="Kaolack">Kaolack</option>
+                        <option value="Kédougou">Kédougou</option>
+                        <option value="Kolda">Kolda</option>
+                        <option value="Louga">Louga</option>
+                        <option value="Matam">Matam</option>
+                        <option value="Sédhiou">Sédhiou</option>
+                        <option value="Tambacounda">Tambacounda</option>
+                        <option value="Ziguinchor">Ziguinchor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Statut</label>
+                    <select id="userStatus" class="form-input">
+                        <option value="true">Actif</option>
+                        <option value="false">Inactif</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="cancelUserBtn">Annuler</button>
+                <button class="btn-save" id="saveUserBtn">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>

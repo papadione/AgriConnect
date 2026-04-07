@@ -5,7 +5,7 @@ const { body } = require('express-validator');
 const { validateRequest } = require('../middleware/validation');
 const authMiddleware = require('../middleware/auth');
 
-// Importer le contrôleur
+// Importer le contrôleur (AVANT de l'utiliser)
 const authController = require('../controllers/authController');
 
 // Vérifier que le contrôleur est bien chargé
@@ -25,7 +25,7 @@ const validationInscription = [
         .withMessage('Numéro de téléphone sénégalais invalide (ex: 77 123 45 67)'),
     body('password').isLength({ min: 6 }).withMessage('Mot de passe minimum 6 caractères'),
     body('fullName').notEmpty().withMessage('Nom complet requis'),
-    body('role').isIn(['buyer', 'farmer', 'wholesaler']).withMessage('Le rôle doit être "acheteur" ou "agriculteur" ou "Grossiste"'),
+    body('role').isIn(['buyer', 'farmer', 'wholesaler']).withMessage('Le rôle doit être "acheteur", "agriculteur" ou "grossiste"'),
     body('location').optional()
 ];
 
@@ -42,6 +42,12 @@ console.log('authController.register existe:', typeof authController.register);
 console.log('authController.login existe:', typeof authController.login);
 console.log('authController.getProfile existe:', typeof authController.getProfile);
 console.log('authController.updateProfile existe:', typeof authController.updateProfile);
+console.log('authController.validateCode existe:', typeof authController.validateCode);
+console.log('authController.resendCode existe:', typeof authController.resendCode);
+
+// Routes pour la validation SMS
+if (authController.validateCode) router.post('/valider-code', authController.validateCode);
+if (authController.resendCode) router.post('/renvoyer-code', authController.resendCode);
 
 // Routes en français
 if (authController.register) router.post('/inscription', validationInscription, validateRequest, authController.register);

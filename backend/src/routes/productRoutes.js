@@ -4,13 +4,13 @@ const router = express.Router();
 const productController = require('../controllers/productController');
 const authMiddleware = require('../middleware/auth');
 
-// Routes publiques (pas besoin de token)
+// Routes publiques
 router.get('/', productController.getAllProducts);
 
 // Routes protégées (authentification requise)
 router.use(authMiddleware);
 
-// Routes spécifiques DOIVENT être AVANT la route avec paramètre :id
+// ⚠️ IMPORTANT: Les routes spécifiques DOIVENT être AVANT la route avec paramètre :id
 router.get('/mes-produits', productController.getFarmerProducts);
 router.post('/', productController.createProduct);
 router.put('/:id', productController.updateProduct);

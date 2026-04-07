@@ -131,139 +131,146 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ================= CONNEXION =================
   document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const phone = document.getElementById('loginPhone')?.value;
-    const password = document.getElementById('loginPassword')?.value;
-    
-    if (!phone || !password) {
-      showError('Veuillez remplir tous les champs', 'loginForm');
-      return;
-    }
-    
-    if (!isValidSenegalPhone(phone)) {
-      showError('Numéro de téléphone sénégalais invalide (ex: 77 123 45 67)', 'loginForm');
-      return;
-    }
-    
-    const formattedPhone = formatPhoneNumber(phone);
-    
-    const btn = e.target.querySelector('.btn-primary');
-    setLoading(btn, true);
-    
-    try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: formattedPhone,
-          password: password
-        })
-      });
+      e.preventDefault();
       
-      const data = await response.json();
+      const phone = document.getElementById('loginPhone')?.value;
+      const password = document.getElementById('loginPassword')?.value;
       
-      if (response.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.utilisateur));
-        
-        if (data.utilisateur.role === 'agriculteur') {
-          window.location.href = 'dashboard.html';
-        } else {
-          window.location.href = 'catalogue.html';
-        }
-      } else {
-        showError(data.erreur || 'Numéro ou mot de passe incorrect', 'loginForm');
+      if (!phone || !password) {
+          showError('Veuillez remplir tous les champs', 'loginForm');
+          return;
       }
-    } catch (error) {
-      console.error('Erreur:', error);
-      showError('Erreur de connexion au serveur', 'loginForm');
-    } finally {
-      setLoading(btn, false);
-    }
+      
+      if (!isValidSenegalPhone(phone)) {
+          showError('Numéro de téléphone sénégalais invalide (ex: 77 123 45 67)', 'loginForm');
+          return;
+      }
+      
+      const formattedPhone = formatPhoneNumber(phone);
+      
+      const btn = e.target.querySelector('.btn-primary');
+      setLoading(btn, true);
+      
+      try {
+          const response = await fetch(`${API_URL}/auth/login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  phone: formattedPhone,
+                  password: password
+              })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+              localStorage.setItem('token', data.token);
+              localStorage.setItem('user', JSON.stringify(data.utilisateur));
+              
+              // Redirection selon le rôle
+              if (data.utilisateur.role === 'administrateur') {
+                  window.location.href = 'admin.html';
+              } else if (data.utilisateur.role === 'agriculteur') {
+                  window.location.href = 'dashboard.html';
+              } else {
+                  window.location.href = 'catalogue.html';
+              }
+          } else {
+              showError(data.erreur || 'Numéro ou mot de passe incorrect', 'loginForm');
+          }
+      } catch (error) {
+          console.error('Erreur:', error);
+          showError('Erreur de connexion au serveur', 'loginForm');
+      } finally {
+          setLoading(btn, false);
+      }
   });
 
   // ================= INSCRIPTION =================
   document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const firstName = document.getElementById('regFirstName')?.value;
-    const lastName = document.getElementById('regLastName')?.value;
-    const phone = document.getElementById('regPhone')?.value;
-    const password = document.getElementById('regPassword')?.value;
-    const region = document.getElementById('regRegion')?.value;
-    const acceptTerms = document.getElementById('acceptTerms')?.checked;
-    
-    let role = document.querySelector('input[name="role"]:checked')?.value;
-    
-    if (!firstName || !lastName || !phone || !password || !region) {
-      showError('Veuillez remplir tous les champs', 'registerForm');
-      return;
-    }
-    
-    if (!acceptTerms) {
-      showError('Vous devez accepter les conditions d\'utilisation', 'registerForm');
-      return;
-    }
-    
-    if (password.length < 6) {
-      showError('Le mot de passe doit contenir au moins 6 caractères', 'registerForm');
-      return;
-    }
-    
-    if (!isValidSenegalPhone(phone)) {
-      showError('Numéro de téléphone sénégalais invalide (ex: 77 123 45 67)', 'registerForm');
-      return;
-    }
-    
-    const roleMapping = {
-      'acheteur': 'buyer',
-      'agriculteur': 'farmer',
-      'grossiste': 'wholesaler'
-    };
-    
-    const backendRole = roleMapping[role] || 'buyer';
-    const fullName = `${firstName} ${lastName}`;
-    const formattedPhone = formatPhoneNumber(phone);
-    
-    const btn = e.target.querySelector('.btn-primary');
-    setLoading(btn, true);
-    
-    try {
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: formattedPhone,
-          password: password,
-          fullName: fullName,
-          role: backendRole,
-          location: region
-        })
-      });
+      e.preventDefault();
       
-      const data = await response.json();
+      const firstName = document.getElementById('regFirstName')?.value;
+      const lastName = document.getElementById('regLastName')?.value;
+      const phone = document.getElementById('regPhone')?.value;
+      const password = document.getElementById('regPassword')?.value;
+      const region = document.getElementById('regRegion')?.value;
+      const acceptTerms = document.getElementById('acceptTerms')?.checked;
       
-      if (response.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.utilisateur));
-        
-        alert('Inscription réussie ! Bienvenue sur AgriConnect Sénégal !');
-        
-        if (data.utilisateur.role === 'agriculteur') {
-          window.location.href = 'dashboard.html';
-        } else {
-          window.location.href = 'catalogue.html';
-        }
-      } else {
-        showError(data.erreur || 'Erreur lors de l\'inscription', 'registerForm');
+      let role = document.querySelector('input[name="role"]:checked')?.value;
+      
+      if (!firstName || !lastName || !phone || !password || !region) {
+          showError('Veuillez remplir tous les champs', 'registerForm');
+          return;
       }
-    } catch (error) {
-      console.error('Erreur:', error);
-      showError('Erreur de connexion au serveur', 'registerForm');
-    } finally {
-      setLoading(btn, false);
-    }
+      
+      if (!acceptTerms) {
+          showError('Vous devez accepter les conditions d\'utilisation', 'registerForm');
+          return;
+      }
+      
+      if (password.length < 6) {
+          showError('Le mot de passe doit contenir au moins 6 caractères', 'registerForm');
+          return;
+      }
+      
+      if (!isValidSenegalPhone(phone)) {
+          showError('Numéro de téléphone sénégalais invalide (ex: 77 123 45 67)', 'registerForm');
+          return;
+      }
+      
+      const roleMapping = {
+          'acheteur': 'buyer',
+          'agriculteur': 'farmer',
+          'grossiste': 'wholesaler'
+      };
+      
+      const backendRole = roleMapping[role] || 'buyer';
+      const fullName = `${firstName} ${lastName}`;
+      const formattedPhone = formatPhoneNumber(phone);
+      
+      const btn = e.target.querySelector('.btn-primary');
+      setLoading(btn, true);
+      
+      try {
+          const response = await fetch(`${API_URL}/auth/inscription`, {  // ← Utiliser /inscription au lieu de /register
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  phone: formattedPhone,
+                  password: password,
+                  fullName: fullName,
+                  role: backendRole,
+                  location: region
+              })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.requiresValidation) {
+              // Afficher le modal de validation SMS
+              showValidationModal(data.phone);
+          } else if (response.ok) {
+              // Inscription directe (si pas de validation)
+              localStorage.setItem('token', data.token);
+              localStorage.setItem('user', JSON.stringify(data.utilisateur));
+              
+              showNotification('Inscription réussie ! Bienvenue sur AgriConnect Sénégal !', 'success', 'Bienvenue');
+              
+              if (data.utilisateur.role === 'agriculteur') {
+                  window.location.href = 'dashboard.html';
+              } else {
+                  window.location.href = 'catalogue.html';
+              }
+          } else {
+              showError(data.erreur || 'Erreur lors de l\'inscription', 'registerForm');
+          }
+      } catch (error) {
+          console.error('Erreur:', error);
+          showError('Erreur de connexion au serveur', 'registerForm');
+      } finally {
+          setLoading(btn, false);
+      }
   });
 
   // ================= FONCTIONS UTILITAIRES =================
@@ -298,22 +305,204 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // ================= VÉRIFICATION DE CONNEXION EXISTANTE =================
   function checkExistingSession() {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    
-    if (token && user && window.location.pathname.includes('index.html')) {
-      try {
-        const userData = JSON.parse(user);
-        if (userData.role === 'agriculteur') {
-          window.location.href = 'dashboard.html';
-        } else {
-          window.location.href = 'catalogue.html';
-        }
-      } catch (e) {
-        console.error('Erreur parsing user', e);
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      
+      if (token && user && window.location.pathname.includes('index.html')) {
+          try {
+              const userData = JSON.parse(user);
+              if (userData.role === 'administrateur') {
+                  window.location.href = 'admin.html';
+              } else if (userData.role === 'agriculteur') {
+                  window.location.href = 'dashboard.html';
+              } else {
+                  window.location.href = 'catalogue.html';
+              }
+          } catch (e) {
+              console.error('Erreur parsing user', e);
+          }
       }
-    }
   }
   
   checkExistingSession();
 });
+
+// Variables pour la validation SMS
+let pendingPhone = null;
+let validationTimer = null;
+
+// Après l'inscription, afficher le modal de validation
+function showValidationModal(phone) {
+    // Cacher le formulaire d'inscription
+    document.getElementById('registerForm').style.display = 'none';
+    
+    // Créer le modal de validation s'il n'existe pas
+    let modal = document.getElementById('validationModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'validationModal';
+        modal.className = 'validation-modal';
+        modal.innerHTML = `
+            <div class="validation-modal-content">
+                <div class="validation-modal-header">
+                    <h3>📱 Validation SMS</h3>
+                    <button class="validation-close" id="closeValidationModal">&times;</button>
+                </div>
+                <div class="validation-modal-body">
+                    <p>Un code de validation a été envoyé au <strong>${phone}</strong></p>
+                    <div class="form-group">
+                        <label>Code à 6 chiffres</label>
+                        <input type="text" id="validationCode" placeholder="Entrez le code reçu par SMS" maxlength="6" autocomplete="off">
+                    </div>
+                    <div id="timerDisplay" class="timer">Expire dans 10:00</div>
+                    <button id="resendCodeBtn" class="btn-resend" style="display: none;">Renvoyer le code</button>
+                </div>
+                <div class="validation-modal-footer">
+                    <button id="cancelValidationBtn" class="btn-cancel">Annuler</button>
+                    <button id="submitValidationBtn" class="btn-validate">Valider</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Gestionnaire de fermeture
+        document.getElementById('closeValidationModal').onclick = closeValidationModal;
+        document.getElementById('cancelValidationBtn').onclick = closeValidationModal;
+        
+        // Validation du code
+        document.getElementById('submitValidationBtn').onclick = async () => {
+            const code = document.getElementById('validationCode').value;
+            if (!code || code.length !== 6) {
+                showNotification('Veuillez entrer le code à 6 chiffres', 'warning', 'Code invalide');
+                return;
+            }
+            await validateCode(phone, code);
+        };
+        
+        // Renvoi du code
+        document.getElementById('resendCodeBtn').onclick = async () => {
+            await resendCode(phone);
+            startTimer(600); // 10 minutes
+        };
+        
+        // Fermeture en cliquant à l'extérieur
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeValidationModal();
+        });
+    }
+    
+    modal.style.display = 'flex';
+    startTimer(600); // 10 minutes
+    pendingPhone = phone;
+}
+
+function closeValidationModal() {
+    const modal = document.getElementById('validationModal');
+    if (modal) modal.style.display = 'none';
+    // Réafficher le formulaire d'inscription
+    document.getElementById('registerForm').style.display = 'block';
+    if (validationTimer) clearInterval(validationTimer);
+}
+
+function startTimer(seconds) {
+    const timerDisplay = document.getElementById('timerDisplay');
+    const resendBtn = document.getElementById('resendCodeBtn');
+    let remaining = seconds;
+    
+    if (validationTimer) clearInterval(validationTimer);
+    
+    validationTimer = setInterval(() => {
+        const minutes = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        timerDisplay.textContent = `Expire dans ${minutes}:${secs.toString().padStart(2, '0')}`;
+        
+        if (remaining <= 0) {
+            clearInterval(validationTimer);
+            timerDisplay.textContent = 'Code expiré';
+            resendBtn.style.display = 'block';
+        }
+        remaining--;
+    }, 1000);
+}
+
+async function validateCode(phone, code) {
+    try {
+        const response = await fetch(`${API_URL}/auth/valider-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, code })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showNotification('Inscription validée avec succès !', 'success', 'Bienvenue');
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.utilisateur));
+            closeValidationModal();
+            
+            if (data.utilisateur.role === 'agriculteur') {
+                window.location.href = 'dashboard.html';
+            } else {
+                window.location.href = 'catalogue.html';
+            }
+        } else {
+            showNotification(data.erreur || 'Code invalide', 'error', 'Erreur');
+        }
+    } catch (error) {
+        console.error('Erreur validation:', error);
+        showNotification('Erreur de connexion au serveur', 'error', 'Erreur');
+    }
+}
+
+async function resendCode(phone) {
+    try {
+        const response = await fetch(`${API_URL}/auth/renvoyer-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showNotification('Nouveau code envoyé par SMS', 'success', 'Code renvoyé');
+        } else {
+            showNotification(data.erreur || 'Erreur lors du renvoi', 'error', 'Erreur');
+        }
+    } catch (error) {
+        console.error('Erreur renvoi:', error);
+        showNotification('Erreur de connexion au serveur', 'error', 'Erreur');
+    }
+}
+
+function showNotification(message, type = 'success', title = '') {
+    const icons = { success: '✓', error: '✗', info: 'ℹ', warning: '⚠' };
+    const titles = { success: 'Succès', error: 'Erreur', info: 'Information', warning: 'Attention' };
+    
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-icon">${icons[type]}</div>
+        <div class="notification-content">
+            <div class="notification-title">${title || titles[type]}</div>
+            <div class="notification-message">${message}</div>
+        </div>
+        <button class="notification-close">&times;</button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.addEventListener('click', () => {
+        notification.classList.add('notification-hide');
+        setTimeout(() => notification.remove(), 300);
+    });
+    
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.classList.add('notification-hide');
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, 4000);
+}

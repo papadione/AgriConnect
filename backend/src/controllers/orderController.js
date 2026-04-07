@@ -1,6 +1,8 @@
 // Contrôleur des commandes
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const User = require('../models/User');
+const SmsService = require('../services/smsService');
 
 // Créer une commande
 exports.createOrder = async (req, res) => {
@@ -54,6 +56,23 @@ exports.createOrder = async (req, res) => {
             deliveryPhone,
             notes
         });
+        
+        // === ENVOI DES SMS ===
+        // Récupérer les infos de l'acheteur et du producteur
+        const buyer = await User.findById(buyerId);
+        const farmer = await User.findById(farmerId);
+        
+        // SMS à l'acheteur : confirmation de commande
+        if (buyer && buyer.phone) {
+            await SmsService.sendOrderConfirmed(buyer.phone, order.order_number);
+        }
+        
+        // SMS au producteur : nouvelle commande reçue
+        if (farmer && farmer.phone) {
+            const message = `🆕 Nouvelle commande ${order.order_number} de ${buyer.full_name} pour ${Math.floor(totalAmount).toLocaleString()} FCFA`;
+            await SmsService.sendSms(farmer.phone, message);
+        }
+        // === FIN ENVOI SMS ===
         
         res.status(201).json({
             succes: true,
@@ -128,7 +147,7 @@ exports.getOrderById = async (req, res) => {
     }
 };
 
-// Mettre à jour le statut d'une commande
+// Mettre à jour le statut d'une commande (avec SMS)
 exports.updateOrderStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -165,6 +184,37 @@ exports.updateOrderStatus = async (req, res) => {
         }
         
         const updatedOrder = await Order.updateStatus(id, status, req.user.id, req.user.role);
+        
+        // === ENVOI DES SMS SELON LE STATUT ===
+        const buyer = await User.findById(order.buyer_id);
+        const farmer = await User.findById(order.farmer_id);
+        
+        switch(status) {
+            case 'confirmed':
+                if (buyer && buyer.phone) {
+                    await SmsService.sendOrderConfirmed(buyer.phone, order.order_number);
+                }
+                break;
+            case 'shipped':
+                if (buyer && buyer.phone) {
+                    await SmsService.sendOrderShipped(buyer.phone, order.order_number);
+                }
+                break;
+            case 'delivered':
+                if (buyer && buyer.phone) {
+                    await SmsService.sendOrderDelivered(buyer.phone, order.order_number);
+                }
+                break;
+            case 'cancelled':
+                if (buyer && buyer.phone) {
+                    await SmsService.sendOrderCancelled(buyer.phone, order.order_number);
+                }
+                if (farmer && farmer.phone) {
+                    await SmsService.sendSms(farmer.phone, `❌ La commande ${order.order_number} a été annulée`);
+                }
+                break;
+        }
+        // === FIN ENVOI SMS ===
         
         res.json({
             succes: true,

@@ -44,9 +44,9 @@ class Product {
     static async findAll(filters = {}) {
         let query = `
             SELECT p.*, 
-                   u.full_name as farmer_name,
-                   u.location as farmer_location,
-                   c.name as category_name
+                u.full_name as farmer_name,
+                u.location as farmer_location,
+                c.name as category_name
             FROM products p
             JOIN users u ON p.farmer_id = u.id
             LEFT JOIN categories c ON p.category_id = c.id
@@ -62,9 +62,10 @@ class Product {
             paramCount++;
         }
         
+        // Filtre par région (localisation du producteur)
         if (filters.region && filters.region !== '') {
-            query += ` AND p.regions @> $${paramCount}::jsonb`;
-            values.push(JSON.stringify([filters.region]));
+            query += ` AND u.location = $${paramCount}`;
+            values.push(filters.region);
             paramCount++;
         }
         
@@ -115,21 +116,7 @@ class Product {
                     images = [];
                 }
             }
-            
-            let regions = [];
-            if (row.regions) {
-                try {
-                    if (typeof row.regions === 'string') {
-                        regions = JSON.parse(row.regions);
-                    } else if (Array.isArray(row.regions)) {
-                        regions = row.regions;
-                    }
-                } catch (e) {
-                    regions = [];
-                }
-            }
-            
-            return { ...row, images, regions };
+            return { ...row, images };
         });
         
         return formattedRows;
@@ -231,58 +218,80 @@ class Product {
         return formattedRows;
     }
     
-    // Mettre à jour un produit (avec gestion des images)
-    static async update(id, farmerId, data) {
-        const { name, price, quantity, description, unit, categoryId, isAvailable, regions, images } = data;
-        
-        let regionsJson = null;
-        if (regions !== undefined) {
-            regionsJson = JSON.stringify(regions || []);
-        }
-        
-        let imagesJson = null;
-        if (images !== undefined) {
-            if (Array.isArray(images) && images.length > 0) {
-                const imagesArray = images.map(img => ({ url: img }));
-                imagesJson = JSON.stringify(imagesArray);
-            } else {
-                imagesJson = JSON.stringify([]);
-            }
-        }
-        
-        let query = `
-            UPDATE products 
-            SET name = COALESCE($1, name),
-                price = COALESCE($2, price),
-                quantity = COALESCE($3, quantity),
-                description = COALESCE($4, description),
-                unit = COALESCE($5, unit),
-                category_id = COALESCE($6, category_id),
-                is_available = COALESCE($7, is_available),
-                updated_at = CURRENT_TIMESTAMP
-        `;
-        
-        const params = [name, price, quantity, description, unit, categoryId, isAvailable];
-        let paramCount = 8;
-        
-        if (regionsJson !== null) {
-            query += `, regions = $${paramCount}::jsonb`;
-            params.push(regionsJson);
-            paramCount++;
-        }
-        
-        if (imagesJson !== null) {
-            query += `, images = $${paramCount}::jsonb`;
-            params.push(imagesJson);
-            paramCount++;
-        }
-        
-        query += ` WHERE id = $${paramCount} AND farmer_id = $${paramCount + 1} RETURNING *`;
-        params.push(id, farmerId);
-        
-        const result = await db.query(query, params);
-        return result.rows[0];
+    // Mettre à jour un produit
+   static async update(id, farmerId, data) {
+    const { name, price, quantity, description, unit, categoryId, isAvailable, images, regions } = data;
+    
+    console.log('🟢 Product.update - Régions reçues:', regions);
+    
+    // Construire la requête dynamiquement
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+    
+    if (name !== undefined) {
+        updates.push(`name = $${paramCount++}`);
+        values.push(name);
     }
+    if (price !== undefined) {
+        updates.push(`price = $${paramCount++}`);
+        values.push(price);
+    }
+    if (quantity !== undefined) {
+        updates.push(`quantity = $${paramCount++}`);
+        values.push(quantity);
+    }
+    if (description !== undefined) {
+        updates.push(`description = $${paramCount++}`);
+        values.push(description);
+    }
+    if (unit !== undefined) {
+        updates.push(`unit = $${paramCount++}`);
+        values.push(unit);
+    }
+    if (categoryId !== undefined) {
+        updates.push(`category_id = $${paramCount++}`);
+        values.push(categoryId);
+    }
+    if (isAvailable !== undefined) {
+        updates.push(`is_available = $${paramCount++}`);
+        values.push(isAvailable);
+    }
+    if (images !== undefined) {
+        // Formater les images pour JSONB
+        let imagesJson = '[]';
+        if (Array.isArray(images) && images.length > 0) {
+            const imagesArray = images.map(img => ({ url: img }));
+            imagesJson = JSON.stringify(imagesArray);
+        }
+        updates.push(`images = $${paramCount++}::jsonb`);
+        values.push(imagesJson);
+    }
+    if (regions !== undefined) {
+        // Formater les régions pour JSONB
+        let regionsJson = '[]';
+        if (Array.isArray(regions) && regions.length > 0) {
+            regionsJson = JSON.stringify(regions);
+        }
+        updates.push(`regions = $${paramCount++}::jsonb`);
+        values.push(regionsJson);
+    }
+    
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    
+    if (updates.length === 1) return null;
+    
+    values.push(id, farmerId);
+    const query = `
+        UPDATE products 
+        SET ${updates.join(', ')}
+        WHERE id = $${paramCount} AND farmer_id = $${paramCount + 1}
+        RETURNING *
+    `;
+    
+    const result = await db.query(query, values);
+    return result.rows[0];
+}
     
     // Mettre à jour le statut (activer/désactiver)
     static async updateStatus(id, farmerId, isAvailable) {

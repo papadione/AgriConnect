@@ -2,6 +2,7 @@
 const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
 const bcrypt = require('bcryptjs');
+const SmsService = require('../services/smsService');
 
 // Fonction utilitaire pour traduire les rôles en français
 const traduireRole = (role) => {
@@ -14,21 +15,82 @@ const traduireRole = (role) => {
     return roles[role] || role;
 };
 
-// Inscription
+// Générer un code aléatoire à 6 chiffres
+function generateValidationCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Stocker les codes temporairement (en mémoire)
+const validationCodes = new Map();
+
+// Inscription - Étape 1: Envoyer le code SMS
 const register = async (req, res) => {
     try {
         const { phone, password, fullName, role, location } = req.body;
         
+        // Vérifier si le numéro existe déjà
         const existingUser = await User.findByPhone(phone);
         if (existingUser) {
             return res.status(400).json({ erreur: 'Ce numéro de téléphone est déjà utilisé' });
         }
         
-        const user = await User.register(phone, password, fullName, role, location);
+        // Générer un code de validation
+        const validationCode = generateValidationCode();
         
-        if (role === 'farmer') {
+        // Stocker les données temporairement avec le code
+        validationCodes.set(phone, {
+            code: validationCode,
+            expires: Date.now() + 10 * 60 * 1000, // 10 minutes
+            data: { phone, password, fullName, role, location }
+        });
+        
+        // Envoyer le code par SMS
+        await SmsService.sendValidationCode(phone, validationCode);
+        
+        res.status(200).json({
+            succes: true,
+            message: 'Code de validation envoyé par SMS',
+            requiresValidation: true,
+            phone: phone
+        });
+        
+    } catch (error) {
+        console.error('Erreur inscription:', error);
+        res.status(500).json({ erreur: 'Erreur lors de l\'inscription' });
+    }
+};
+
+// Valider le code SMS et finaliser l'inscription
+const validateCode = async (req, res) => {
+    try {
+        const { phone, code } = req.body;
+        
+        const pendingData = validationCodes.get(phone);
+        
+        if (!pendingData) {
+            return res.status(400).json({ erreur: 'Aucune inscription en attente pour ce numéro' });
+        }
+        
+        if (pendingData.expires < Date.now()) {
+            validationCodes.delete(phone);
+            return res.status(400).json({ erreur: 'Le code a expiré. Veuillez réessayer.' });
+        }
+        
+        if (pendingData.code !== code) {
+            return res.status(400).json({ erreur: 'Code invalide' });
+        }
+        
+        const { data } = pendingData;
+        
+        // Créer l'utilisateur
+        const user = await User.register(data.phone, data.password, data.fullName, data.role, data.location);
+        
+        if (data.role === 'farmer') {
             await User.createFarmerProfile(user.id);
         }
+        
+        // Supprimer les données temporaires
+        validationCodes.delete(phone);
         
         const token = generateToken(user.id, user.phone, user.role);
         
@@ -45,12 +107,42 @@ const register = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('Erreur inscription:', error);
-        res.status(500).json({ erreur: 'Erreur lors de l\'inscription' });
+        console.error('Erreur validation code:', error);
+        res.status(500).json({ erreur: 'Erreur lors de la validation' });
     }
 };
 
-// Connexion
+// Renvoyer un nouveau code SMS
+const resendCode = async (req, res) => {
+    try {
+        const { phone } = req.body;
+        
+        const pendingData = validationCodes.get(phone);
+        
+        if (!pendingData) {
+            return res.status(400).json({ erreur: 'Aucune inscription en attente pour ce numéro' });
+        }
+        
+        const newCode = generateValidationCode();
+        
+        pendingData.code = newCode;
+        pendingData.expires = Date.now() + 10 * 60 * 1000;
+        validationCodes.set(phone, pendingData);
+        
+        await SmsService.sendValidationCode(phone, newCode);
+        
+        res.json({
+            succes: true,
+            message: 'Nouveau code envoyé par SMS'
+        });
+        
+    } catch (error) {
+        console.error('Erreur renvoi code:', error);
+        res.status(500).json({ erreur: 'Erreur lors du renvoi du code' });
+    }
+};
+
+// Connexion (pas de changement)
 const login = async (req, res) => {
     try {
         const { phone, password } = req.body;
@@ -175,9 +267,11 @@ const updateProfile = async (req, res) => {
     }
 };
 
-// EXPORT - Toutes les fonctions sont maintenant des const
+// EXPORT
 module.exports = {
     register,
+    validateCode,
+    resendCode,
     login,
     getProfile,
     updateProfile
