@@ -24,6 +24,43 @@ function generateValidationCode() {
 const validationCodes = new Map();
 
 // Inscription - Étape 1: Envoyer le code SMS
+// const register = async (req, res) => {
+//     try {
+//         const { phone, password, fullName, role, location } = req.body;
+        
+//         // Vérifier si le numéro existe déjà
+//         const existingUser = await User.findByPhone(phone);
+//         if (existingUser) {
+//             return res.status(400).json({ erreur: 'Ce numéro de téléphone est déjà utilisé' });
+//         }
+        
+//         // Générer un code de validation
+//         const validationCode = generateValidationCode();
+        
+//         // Stocker les données temporairement avec le code
+//         validationCodes.set(phone, {
+//             code: validationCode,
+//             expires: Date.now() + 10 * 60 * 1000, // 10 minutes
+//             data: { phone, password, fullName, role, location }
+//         });
+        
+//         // Envoyer le code par SMS
+//         await SmsService.sendValidationCode(phone, validationCode);
+        
+//         res.status(200).json({
+//             succes: true,
+//             message: 'Code de validation envoyé par SMS',
+//             requiresValidation: true,
+//             phone: phone
+//         });
+        
+//     } catch (error) {
+//         console.error('Erreur inscription:', error);
+//         res.status(500).json({ erreur: 'Erreur lors de l\'inscription' });
+//     }
+// };
+
+// Inscription - Sans validation SMS
 const register = async (req, res) => {
     try {
         const { phone, password, fullName, role, location } = req.body;
@@ -34,24 +71,25 @@ const register = async (req, res) => {
             return res.status(400).json({ erreur: 'Ce numéro de téléphone est déjà utilisé' });
         }
         
-        // Générer un code de validation
-        const validationCode = generateValidationCode();
+        // Créer l'utilisateur directement (sans code SMS)
+        const user = await User.register(phone, password, fullName, role, location);
         
-        // Stocker les données temporairement avec le code
-        validationCodes.set(phone, {
-            code: validationCode,
-            expires: Date.now() + 10 * 60 * 1000, // 10 minutes
-            data: { phone, password, fullName, role, location }
-        });
+        if (role === 'farmer') {
+            await User.createFarmerProfile(user.id);
+        }
         
-        // Envoyer le code par SMS
-        await SmsService.sendValidationCode(phone, validationCode);
+        const token = generateToken(user.id, user.phone, user.role);
         
-        res.status(200).json({
+        res.status(201).json({
             succes: true,
-            message: 'Code de validation envoyé par SMS',
-            requiresValidation: true,
-            phone: phone
+            token,
+            utilisateur: {
+                id: user.id,
+                telephone: user.phone,
+                nomComplet: user.full_name,
+                role: traduireRole(user.role),
+                localisation: user.location
+            }
         });
         
     } catch (error) {
