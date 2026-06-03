@@ -4,7 +4,7 @@
 
     // Configuration
     const API_URL = 'https://agriconnect-api-ylnb.onrender.com/api/v1';
-    const BACKEND_URL = 'http://localhost:3000';
+    const BACKEND_URL = 'https://agriconnect-api-ylnb.onrender.com';
 
     // ================= NOTIFICATIONS =================
     function showNotification(message, type = 'success', title = '', duration = 5000) {
