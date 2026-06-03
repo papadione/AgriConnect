@@ -15,7 +15,7 @@ async function apiRequest(endpoint, options = {}) {
         headers['Authorization'] = `Bearer ${token}`;
     }
     
-    const response = await fetch(`http://localhost:3000/api/v1${endpoint}`, {
+    const response = await fetch(`https://agriconnect-api-ylnb.onrender.com/api/v1${endpoint}`, {
         ...options,
         headers
     });
@@ -77,7 +77,7 @@ async function uploadImage(file) {
     const formData = new FormData();
     formData.append('image', file);
     
-    const response = await fetch(`http://localhost:3000/api/v1/upload`, {
+    const response = await fetch(`https://agriconnect-api-ylnb.onrender.com/api/v1/upload`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`

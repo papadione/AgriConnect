@@ -2,7 +2,7 @@
 // AgriConnect Sénégal — admin.js
 // =========================================
 
-const API_URL = 'http://localhost:3000/api/v1';
+const API_URL = 'https://agriconnect-api-ylnb.onrender.com/api/v1';
 
 // Vérifier si l'utilisateur est admin
 function checkAdminAuth() {
