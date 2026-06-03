@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const authMiddleware = require('../middleware/auth');
-const UploadService = require('../services/cloudService'); // ← Utilise ton nom de fichier
+const UploadService = require('../services/uploadService'); // ← Utilise ton nom de fichier
 
 const storage = multer.memoryStorage();
 
