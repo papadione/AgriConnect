@@ -1,8 +1,6 @@
 // =========================================
 // AgriConnect Sénégal — catalogue.js
 // =========================================
-// Importer le panier (si utilisé avec modules)
-// Sinon, le panier est déjà chargé via cart.js
 
 const API_URL = 'http://localhost:3000/api/v1';
 const BACKEND_URL = 'http://localhost:3000';
@@ -23,7 +21,7 @@ function checkAuth() {
     const user = localStorage.getItem('user');
     
     if (!token || !user) {
-        localStorage.removeItem('agriconnect_cart'); // Vider le panier
+        localStorage.removeItem('agriconnect_cart');
         window.location.href = 'index.html';
         return null;
     }
@@ -53,7 +51,6 @@ function setupLogout() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
-            // Vider le panier avant déconnexion
             localStorage.removeItem('agriconnect_cart');
             localStorage.removeItem('token');
             localStorage.removeItem('user');
@@ -104,7 +101,6 @@ function getSelectedRegions() {
 }
 
 function setupFilters() {
-    // Filtre catégorie
     const categoryFilter = document.getElementById('categoryFilter');
     if (categoryFilter) {
         categoryFilter.addEventListener('change', (e) => {
@@ -114,7 +110,6 @@ function setupFilters() {
         });
     }
     
-    // Filtre tri
     const sortFilter = document.getElementById('sortFilter');
     if (sortFilter) {
         sortFilter.addEventListener('change', (e) => {
@@ -124,7 +119,6 @@ function setupFilters() {
         });
     }
     
-    // Filtre prix
     const priceFilter = document.getElementById('priceFilter');
     const priceValue = document.getElementById('priceValue');
     if (priceFilter && priceValue) {
@@ -140,7 +134,6 @@ function setupFilters() {
         });
     }
     
-    // Recherche
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         let debounceTimer;
@@ -154,7 +147,6 @@ function setupFilters() {
         });
     }
     
-    // Bouton réinitialiser
     const resetBtn = document.getElementById('resetFiltersBtn');
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
@@ -216,13 +208,6 @@ async function loadProducts() {
 }
 
 function displayProducts(products) {
-    console.log('Produits reçus de l\'API:', products);
-    
-    // Afficher les IDs des producteurs pour chaque produit
-    products.forEach(product => {
-        console.log(`Produit: ${product.nom}, Producteur ID:`, product.producteur?.id || product.farmer_id);
-    });
-    
     const productsGrid = document.getElementById('productsGrid');
     
     if (!products || products.length === 0) {
@@ -242,9 +227,7 @@ function displayProducts(products) {
             ? `📍 ${product.regions.join(', ')}` 
             : '📍 Livraison nationale';
         
-        // Récupérer l'ID du producteur
         const farmerId = product.producteur?.id || product.farmer_id;
-        console.log(`Affichage carte: ${product.nom}, FarmerId: ${farmerId}`);
         
         return `
             <div class="product-card" data-id="${product.id}" data-farmer-id="${farmerId || ''}">
@@ -267,17 +250,14 @@ function displayProducts(products) {
         `;
     }).join('');
     
-    // Événement clic sur les cartes produits
     document.querySelectorAll('.product-card').forEach(card => {
         card.addEventListener('click', (e) => {
             if (!e.target.classList.contains('btn-add-cart')) {
-                const productId = card.dataset.id;
-                openProductDetail(productId);
+                openProductDetail(card.dataset.id);
             }
         });
     });
     
-    // Événement ajout au panier
     document.querySelectorAll('.btn-add-cart').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -295,50 +275,29 @@ function escapeHtml(text) {
 
 // ================= MODAL DÉTAILS =================
 async function openProductDetail(productId) {
-    console.log('openProductDetail appelé avec ID:', productId);
-    
     const modal = document.getElementById('productDetailModal');
-    if (!modal) {
-        console.error('Modal #productDetailModal non trouvé dans le DOM');
-        return;
-    }
+    if (!modal) return;
     
-    // Récupérer le token
     const token = localStorage.getItem('token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
     try {
-        // Ajouter le token dans les headers
-        const headers = {};
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-        
-        const response = await fetch(`${API_URL}/produits/${productId}`, {
-            headers: headers
-        });
-        
+        const response = await fetch(`${API_URL}/produits/${productId}`, { headers });
         const data = await response.json();
-        
-        console.log('Réponse API complète:', data);
         
         if (response.ok && data.succes && data.produit) {
             const p = data.produit;
             
-            // Mettre à jour les champs du modal
             document.getElementById('detailProductName').textContent = p.nom || 'Sans nom';
             document.getElementById('detailProductPrice').textContent = `${Math.floor(p.prix || 0).toLocaleString()} FCFA`;
             document.getElementById('detailProductUnit').textContent = `/${p.unite || 'kg'}`;
             document.getElementById('detailProductFarmer').textContent = p.producteur?.nom || p.farmer_name || 'Inconnu';
             document.getElementById('detailProductLocation').textContent = p.producteur?.localisation || p.farmer_location || 'Non spécifiée';
-            
-            const regionsText = p.regions && p.regions.length > 0 ? p.regions.join(', ') : 'Livraison nationale';
-            document.getElementById('detailProductRegions').textContent = regionsText;
+            document.getElementById('detailProductRegions').textContent = p.regions && p.regions.length > 0 ? p.regions.join(', ') : 'Livraison nationale';
             document.getElementById('detailProductStock').textContent = `${Math.floor(p.quantite || 0)} ${p.unite || 'kg'}`;
             document.getElementById('detailProductDescription').textContent = p.description || 'Aucune description';
             document.getElementById('detailProductViews').textContent = p.vues || 0;
-            
-            const date = p.dateCreation ? new Date(p.dateCreation) : new Date();
-            document.getElementById('detailProductDate').textContent = date.toLocaleDateString('fr-FR');
+            document.getElementById('detailProductDate').textContent = new Date(p.dateCreation).toLocaleDateString('fr-FR');
             
             const imgElement = document.getElementById('detailProductImage');
             if (p.images && p.images.length > 0) {
@@ -352,12 +311,9 @@ async function openProductDetail(productId) {
             
             modal.dataset.productId = productId;
             modal.style.display = 'flex';
-        } else {
-            console.error('Erreur dans la réponse:', data);
-            showNotification(data.erreur || 'Impossible de charger les détails du produit', 'error', 'Erreur');
         }
     } catch (error) {
-        console.error('Erreur lors de l\'appel API:', error);
+        console.error('Erreur:', error);
         showNotification('Erreur de chargement des détails', 'error', 'Erreur');
     }
 }
@@ -395,7 +351,6 @@ function setupDetailModal() {
 
 // ================= PANIER =================
 function addToCart(productId) {
-    // Récupérer les infos du produit depuis le DOM
     const productCard = document.querySelector(`.product-card[data-id="${productId}"]`);
     if (!productCard) return;
     
@@ -403,21 +358,11 @@ function addToCart(productId) {
     const productPriceText = productCard.querySelector('.product-price')?.textContent || '0';
     const productPrice = parseInt(productPriceText.replace(/\D/g, ''));
     const productUnit = productCard.querySelector('.product-price small')?.textContent?.replace('/', '') || 'kg';
-    const farmerName = productCard.querySelector('.product-farmer')?.textContent || '';
-    
-    // Extraire l'ID du producteur (à ajouter dans le HTML)
     let farmerId = productCard.dataset.farmerId;
-    
-    // Alternative: récupérer depuis l'attribut data-farmer-id
-    if (!farmerId) {
-        farmerId = productCard.getAttribute('data-farmer-id');
-    }
     
     let productImage = '';
     const productImageElem = productCard.querySelector('.product-image img');
-    if (productImageElem) {
-        productImage = productImageElem.src;
-    }
+    if (productImageElem) productImage = productImageElem.src;
     
     Cart.addItem({
         id: parseInt(productId),
@@ -425,8 +370,7 @@ function addToCart(productId) {
         price: productPrice,
         unit: productUnit,
         image: productImage,
-        farmerId: farmerId,
-        farmerName: farmerName
+        farmerId: farmerId
     });
 }
 
@@ -462,167 +406,59 @@ function showNotification(message, type = 'success', title = '') {
     }, 4000);
 }
 
-// Redirection vers le profil dans le tableau de bord
+// ================= AVATAR =================
 function setupAvatarRedirect() {
-    console.log('Recherche de .user-avatar-small...');
     const userAvatar = document.querySelector('.user-avatar-small');
-    console.log('Avatar trouvé:', userAvatar);
-    
     if (userAvatar) {
-        console.log('Ajout de l\'écouteur d\'événement');
         userAvatar.addEventListener('click', () => {
-            console.log('Avatar cliqué !');
             window.location.href = 'dashboard.html?tab=profile';
         });
-    } else {
-        console.log('Avatar NON trouvé - vérifie le HTML');
     }
 }
 
-// Créer une commande depuis le panier
-async function createOrder() {
-    console.log('createOrder appelée');
-    
-    const token = localStorage.getItem('token');
-    const userData = checkAuth();
-    
-    if (!userData) return;
-    
-    const items = Cart.getItems();
-    console.log('Items dans le panier:', items);
-    
-    if (items.length === 0) {
-        showNotification('Votre panier est vide', 'warning', 'Panier');
-        return;
-    }
-    
-    // Vérifier que tous les produits sont du même producteur
-    const farmerId = items[0].farmerId;
-    const sameFarmer = items.every(item => item.farmerId === farmerId);
-    
-    if (!sameFarmer) {
-        showNotification('Vous ne pouvez commander que des produits du même producteur', 'warning', 'Commande');
-        return;
-    }
-    
-    if (!farmerId) {
-        showNotification('Impossible d\'identifier le producteur', 'error', 'Erreur');
-        return;
-    }
-    
-    // Demander les informations de livraison
-    const region = prompt('📍 Votre région (Dakar, Thiès, etc.) :');
-    if (!region) return;
-    
-    const quartier = prompt('🏠 Votre quartier / adresse précise :');
-    if (!quartier) return;
-    
-    const deliveryPhone = prompt('📱 Votre numéro de téléphone :');
-    if (!deliveryPhone) return;
-    
-    const deliveryAddress = `${quartier}, ${region}`;
-    
-    const orderItems = items.map(item => ({
-        productId: item.id,
-        quantity: item.quantity
-    }));
-    
-    console.log('Envoi commande:', { farmerId, orderItems, deliveryAddress, deliveryPhone });
-    
-    try {
-        const response = await fetch(`${API_URL}/commandes`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                farmerId: parseInt(farmerId),
-                items: orderItems,
-                deliveryAddress: deliveryAddress,
-                deliveryPhone: deliveryPhone
-            })
-        });
-        
-        const data = await response.json();
-        console.log('Réponse commande:', data);
-        
-        if (response.ok) {
-            showNotification('Commande créée avec succès !', 'success', 'Commande');
-            Cart.clear();
-        } else {
-            showNotification(data.erreur || 'Erreur lors de la création', 'error', 'Erreur');
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        showNotification('Erreur de connexion au serveur', 'error', 'Connexion');
-    }
-}
-
-// Initialisation
-function initCart() {
-    const cartBtn = document.getElementById('cartBtn');
-    if (cartBtn) {
-        cartBtn.addEventListener('click', () => Cart.openModal());
-    }
-    
-    const closeCart = document.getElementById('closeCartModal');
-    if (closeCart) {
-        closeCart.addEventListener('click', () => Cart.closeModal());
-    }
-    
-    const modal = document.getElementById('cartModal');
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) Cart.closeModal();
-        });
-    }
-    
-    // === AJOUTER CETTE LIGNE ===
-    const checkoutBtn = document.getElementById('checkoutBtn');
-    if (checkoutBtn) {
-        checkoutBtn.addEventListener('click', () => {
-            console.log('Clic sur le bouton checkout');
-            Cart.closeModal();
-            if (typeof createOrder === 'function') {
-                createOrder();
-            } else {
-                console.error('createOrder n\'est pas défini');
-            }
-        });
-    }
-    
-    Cart.updateBadge();
-}
-// Variables pour la commande
+// ================= COMMANDE =================
 let pendingOrder = null;
 
-// Ouvrir le modal de livraison
 function openDeliveryModal() {
     const modal = document.getElementById('deliveryModal');
-    if (modal) {
+    const userData = checkAuth();
+    
+    if (modal && userData) {
+        const userPhone = userData.user.telephone;
+        const formattedPhone = userPhone.replace(/(\d{2})(\d{3})(\d{2})(\d{2})/, '$1 $2 $3 $4');
+        document.getElementById('existingPhoneDisplay').textContent = formattedPhone;
+        
         document.getElementById('deliveryRegion').value = '';
         document.getElementById('deliveryQuartier').value = '';
-        document.getElementById('deliveryPhone').value = '';
+        document.getElementById('deliveryPhoneNew').value = '';
+        document.getElementById('deliveryPhoneNew').style.display = 'none';
+        document.querySelector('input[name="deliveryPhoneOption"][value="existing"]').checked = true;
+        
         modal.style.display = 'flex';
     }
 }
 
 function closeDeliveryModal() {
     const modal = document.getElementById('deliveryModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
+    if (modal) modal.style.display = 'none';
 }
 
-// Initialisation du modal de livraison
 function setupDeliveryModal() {
     const closeBtn = document.getElementById('closeDeliveryModal');
     const cancelBtn = document.getElementById('cancelDeliveryBtn');
     const confirmBtn = document.getElementById('confirmDeliveryBtn');
+    const phoneOptions = document.querySelectorAll('input[name="deliveryPhoneOption"]');
+    const newPhoneInput = document.getElementById('deliveryPhoneNew');
     
     if (closeBtn) closeBtn.onclick = closeDeliveryModal;
     if (cancelBtn) cancelBtn.onclick = closeDeliveryModal;
+    
+    phoneOptions.forEach(option => {
+        option.addEventListener('change', (e) => {
+            newPhoneInput.style.display = e.target.value === 'new' ? 'block' : 'none';
+        });
+    });
+    
     if (confirmBtn) confirmBtn.onclick = confirmOrder;
     
     const modal = document.getElementById('deliveryModal');
@@ -633,17 +469,11 @@ function setupDeliveryModal() {
     }
 }
 
-// Modifier la fonction createOrder (remplacer l'ancienne)
 async function createOrder() {
-    console.log('createOrder appelée');
-    
-    const token = localStorage.getItem('token');
     const userData = checkAuth();
-    
     if (!userData) return;
     
     const items = Cart.getItems();
-    
     if (items.length === 0) {
         showNotification('Votre panier est vide', 'warning', 'Panier');
         return;
@@ -662,38 +492,41 @@ async function createOrder() {
         return;
     }
     
-    // Stocker les infos pour validation
     pendingOrder = {
         farmerId: parseInt(farmerId),
-        items: items.map(item => ({
-            productId: item.id,
-            quantity: item.quantity
-        }))
+        items: items.map(item => ({ productId: item.id, quantity: item.quantity }))
     };
     
-    // Ouvrir le modal de livraison
     openDeliveryModal();
 }
 
-// Confirmer la commande avec les infos de livraison
 async function confirmOrder() {
     const region = document.getElementById('deliveryRegion').value;
     const quartier = document.getElementById('deliveryQuartier').value;
-    let deliveryPhone = document.getElementById('deliveryPhone').value;
+    const useExisting = document.querySelector('input[name="deliveryPhoneOption"][value="existing"]').checked;
+    let deliveryPhone = useExisting ? checkAuth().user.telephone : document.getElementById('deliveryPhoneNew').value;
     
-    if (!region || !quartier || !deliveryPhone) {
+    if (!region || !quartier) {
         showNotification('Veuillez remplir tous les champs', 'warning', 'Champs manquants');
         return;
     }
     
-    // Nettoyer le téléphone
-    deliveryPhone = deliveryPhone.replace(/\s/g, '');
-    if (!deliveryPhone.startsWith('221')) {
-        deliveryPhone = '221' + deliveryPhone;
+    if (!useExisting && !deliveryPhone) {
+        showNotification('Veuillez entrer votre numéro de téléphone', 'warning', 'Champs manquants');
+        return;
+    }
+    
+    let cleanedPhone = deliveryPhone.toString().replace(/\s/g, '').replace(/\D/g, '');
+    if (cleanedPhone.startsWith('221')) cleanedPhone = cleanedPhone.substring(3);
+    if (cleanedPhone.startsWith('0')) cleanedPhone = cleanedPhone.substring(1);
+    
+    if (cleanedPhone.length !== 9) {
+        showNotification('Numéro de téléphone invalide (9 chiffres)', 'warning', 'Format invalide');
+        return;
     }
     
     const deliveryAddress = `${quartier}, ${region}`;
-    
+    const formattedPhone = '221' + cleanedPhone;
     const token = localStorage.getItem('token');
     
     try {
@@ -707,7 +540,7 @@ async function confirmOrder() {
                 farmerId: pendingOrder.farmerId,
                 items: pendingOrder.items,
                 deliveryAddress: deliveryAddress,
-                deliveryPhone: deliveryPhone
+                deliveryPhone: formattedPhone
             })
         });
         
@@ -727,7 +560,36 @@ async function confirmOrder() {
     }
 }
 
-// Ajouter setupDeliveryModal dans DOMContentLoaded
+// ================= INITIALISATION =================
+function initCart() {
+    const cartBtn = document.getElementById('cartBtn');
+    if (cartBtn) {
+        cartBtn.addEventListener('click', () => Cart.openModal());
+    }
+    
+    const closeCart = document.getElementById('closeCartModal');
+    if (closeCart) {
+        closeCart.addEventListener('click', () => Cart.closeModal());
+    }
+    
+    const modal = document.getElementById('cartModal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) Cart.closeModal();
+        });
+    }
+    
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) {
+        checkoutBtn.addEventListener('click', () => {
+            Cart.closeModal();
+            createOrder();
+        });
+    }
+    
+    Cart.updateBadge();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initCart();
     displayUserName();
@@ -736,7 +598,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupRegionFilter();
     setupFilters();
     setupDetailModal();
-    setupDeliveryModal();  // ← AJOUTER CETTE LIGNE
-    setupAvatarRedirect();  
+    setupDeliveryModal();
+    setupAvatarRedirect();
     loadProducts();
 });

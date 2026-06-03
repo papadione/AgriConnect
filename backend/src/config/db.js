@@ -9,22 +9,18 @@ const pool = new Pool({
     database: process.env.DB_NAME,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
+    ssl: {
+        rejectUnauthorized: false  // ← AJOUTER CETTE LIGNE POUR RENDER
+    },
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
 });
 
-// Test de connexion immédiat
-pool.connect((err, client, release) => {
-    if (err) {
-        console.error('❌ Erreur de connexion:', err.message);
-        console.error('   Vérifie vos identifiants dans .env');
-        return;
-    }
-    release();
+pool.on('connect', () => {
     console.log('✅ Connecté à PostgreSQL');
     console.log(`   Base: ${process.env.DB_NAME}`);
-    console.log(`   Hôte: ${process.env.DB_HOST}:${process.env.DB_PORT}`);
+    console.log(`   Hôte: ${process.env.DB_HOST}`);
 });
 
 pool.on('error', (err) => {
