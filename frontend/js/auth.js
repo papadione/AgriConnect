@@ -167,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
               localStorage.setItem('token', data.token);
               localStorage.setItem('user', JSON.stringify(data.utilisateur));
               
-              // Redirection selon le rôle
               if (data.utilisateur.role === 'administrateur') {
                   window.location.href = 'admin.html';
               } else if (data.utilisateur.role === 'agriculteur') {
@@ -233,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setLoading(btn, true);
       
       try {
-          const response = await fetch(`${API_URL}/auth/inscription`, {  // ← Utiliser /inscription au lieu de /register
+          const response = await fetch(`${API_URL}/auth/inscription`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -247,28 +246,12 @@ document.addEventListener('DOMContentLoaded', () => {
           
           const data = await response.json();
           
-        //   if (response.ok && data.requiresValidation) {
-        //       // Afficher le modal de validation SMS
-        //       showValidationModal(data.phone);
-        //   } else if (response.ok) {
-        //       // Inscription directe (si pas de validation)
-        //       localStorage.setItem('token', data.token);
-        //       localStorage.setItem('user', JSON.stringify(data.utilisateur));
+          if (response.ok) {
+              localStorage.setItem('token', data.token);
+              localStorage.setItem('user', JSON.stringify(data.utilisateur));
               
-        //       showNotification('Inscription réussie ! Bienvenue sur AgriConnect Sénégal !', 'success', 'Bienvenue');
+              showNotification('Inscription réussie ! Bienvenue sur AgriConnect Sénégal !', 'success', 'Bienvenue');
               
-        if (response.ok) {
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.utilisateur));
-    
-    showNotification('Inscription réussie ! Bienvenue sur AgriConnect Sénégal !', 'success', 'Bienvenue');
-    
-    if (data.utilisateur.role === 'agriculteur') {
-        window.location.href = 'dashboard.html';
-    } else {
-        window.location.href = 'catalogue.html';
-    }
-}
               if (data.utilisateur.role === 'agriculteur') {
                   window.location.href = 'dashboard.html';
               } else {
@@ -315,6 +298,37 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => el.remove(), 5000);
   }
   
+  function showNotification(message, type = 'success', title = '') {
+    const icons = { success: '✓', error: '✗', info: 'ℹ', warning: '⚠' };
+    const titles = { success: 'Succès', error: 'Erreur', info: 'Information', warning: 'Attention' };
+    
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+      <div class="notification-icon">${icons[type]}</div>
+      <div class="notification-content">
+        <div class="notification-title">${title || titles[type]}</div>
+        <div class="notification-message">${message}</div>
+      </div>
+      <button class="notification-close">&times;</button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.addEventListener('click', () => {
+      notification.classList.add('notification-hide');
+      setTimeout(() => notification.remove(), 300);
+    });
+    
+    setTimeout(() => {
+      if (notification.parentElement) {
+        notification.classList.add('notification-hide');
+        setTimeout(() => notification.remove(), 300);
+      }
+    }, 4000);
+  }
+  
   // ================= VÉRIFICATION DE CONNEXION EXISTANTE =================
   function checkExistingSession() {
       const token = localStorage.getItem('token');
@@ -338,183 +352,3 @@ document.addEventListener('DOMContentLoaded', () => {
   
   checkExistingSession();
 });
-
-// Variables pour la validation SMS
-let pendingPhone = null;
-let validationTimer = null;
-
-// Après l'inscription, afficher le modal de validation
-function showValidationModal(phone) {
-    // Cacher le formulaire d'inscription
-    document.getElementById('registerForm').style.display = 'none';
-    
-    // Créer le modal de validation s'il n'existe pas
-    let modal = document.getElementById('validationModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'validationModal';
-        modal.className = 'validation-modal';
-        modal.innerHTML = `
-            <div class="validation-modal-content">
-                <div class="validation-modal-header">
-                    <h3>📱 Validation SMS</h3>
-                    <button class="validation-close" id="closeValidationModal">&times;</button>
-                </div>
-                <div class="validation-modal-body">
-                    <p>Un code de validation a été envoyé au <strong>${phone}</strong></p>
-                    <div class="form-group">
-                        <label>Code à 6 chiffres</label>
-                        <input type="text" id="validationCode" placeholder="Entrez le code reçu par SMS" maxlength="6" autocomplete="off">
-                    </div>
-                    <div id="timerDisplay" class="timer">Expire dans 10:00</div>
-                    <button id="resendCodeBtn" class="btn-resend" style="display: none;">Renvoyer le code</button>
-                </div>
-                <div class="validation-modal-footer">
-                    <button id="cancelValidationBtn" class="btn-cancel">Annuler</button>
-                    <button id="submitValidationBtn" class="btn-validate">Valider</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        
-        // Gestionnaire de fermeture
-        document.getElementById('closeValidationModal').onclick = closeValidationModal;
-        document.getElementById('cancelValidationBtn').onclick = closeValidationModal;
-        
-        // Validation du code
-        document.getElementById('submitValidationBtn').onclick = async () => {
-            const code = document.getElementById('validationCode').value;
-            if (!code || code.length !== 6) {
-                showNotification('Veuillez entrer le code à 6 chiffres', 'warning', 'Code invalide');
-                return;
-            }
-            await validateCode(phone, code);
-        };
-        
-        // Renvoi du code
-        document.getElementById('resendCodeBtn').onclick = async () => {
-            await resendCode(phone);
-            startTimer(600); // 10 minutes
-        };
-        
-        // Fermeture en cliquant à l'extérieur
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeValidationModal();
-        });
-    }
-    
-    modal.style.display = 'flex';
-    startTimer(600); // 10 minutes
-    pendingPhone = phone;
-}
-
-function closeValidationModal() {
-    const modal = document.getElementById('validationModal');
-    if (modal) modal.style.display = 'none';
-    // Réafficher le formulaire d'inscription
-    document.getElementById('registerForm').style.display = 'block';
-    if (validationTimer) clearInterval(validationTimer);
-}
-
-function startTimer(seconds) {
-    const timerDisplay = document.getElementById('timerDisplay');
-    const resendBtn = document.getElementById('resendCodeBtn');
-    let remaining = seconds;
-    
-    if (validationTimer) clearInterval(validationTimer);
-    
-    validationTimer = setInterval(() => {
-        const minutes = Math.floor(remaining / 60);
-        const secs = remaining % 60;
-        timerDisplay.textContent = `Expire dans ${minutes}:${secs.toString().padStart(2, '0')}`;
-        
-        if (remaining <= 0) {
-            clearInterval(validationTimer);
-            timerDisplay.textContent = 'Code expiré';
-            resendBtn.style.display = 'block';
-        }
-        remaining--;
-    }, 1000);
-}
-
-async function validateCode(phone, code) {
-    try {
-        const response = await fetch(`${API_URL}/auth/valider-code`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, code })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            showNotification('Inscription validée avec succès !', 'success', 'Bienvenue');
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.utilisateur));
-            closeValidationModal();
-            
-            if (data.utilisateur.role === 'agriculteur') {
-                window.location.href = 'dashboard.html';
-            } else {
-                window.location.href = 'catalogue.html';
-            }
-        } else {
-            showNotification(data.erreur || 'Code invalide', 'error', 'Erreur');
-        }
-    } catch (error) {
-        console.error('Erreur validation:', error);
-        showNotification('Erreur de connexion au serveur', 'error', 'Erreur');
-    }
-}
-
-async function resendCode(phone) {
-    try {
-        const response = await fetch(`${API_URL}/auth/renvoyer-code`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            showNotification('Nouveau code envoyé par SMS', 'success', 'Code renvoyé');
-        } else {
-            showNotification(data.erreur || 'Erreur lors du renvoi', 'error', 'Erreur');
-        }
-    } catch (error) {
-        console.error('Erreur renvoi:', error);
-        showNotification('Erreur de connexion au serveur', 'error', 'Erreur');
-    }
-}
-
-function showNotification(message, type = 'success', title = '') {
-    const icons = { success: '✓', error: '✗', info: 'ℹ', warning: '⚠' };
-    const titles = { success: 'Succès', error: 'Erreur', info: 'Information', warning: 'Attention' };
-    
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-        <div class="notification-icon">${icons[type]}</div>
-        <div class="notification-content">
-            <div class="notification-title">${title || titles[type]}</div>
-            <div class="notification-message">${message}</div>
-        </div>
-        <button class="notification-close">&times;</button>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    const closeBtn = notification.querySelector('.notification-close');
-    closeBtn.addEventListener('click', () => {
-        notification.classList.add('notification-hide');
-        setTimeout(() => notification.remove(), 300);
-    });
-    
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.classList.add('notification-hide');
-            setTimeout(() => notification.remove(), 300);
-        }
-    }, 4000);
-}
