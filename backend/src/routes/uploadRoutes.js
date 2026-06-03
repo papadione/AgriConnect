@@ -2,26 +2,10 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const authMiddleware = require('../middleware/auth');
+const UploadService = require('../services/cloudService'); // ← Utilise ton nom de fichier
 
-// Créer le dossier uploads s'il n'existe pas
-const uploadDir = path.join(__dirname, '../../uploads/');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-    console.log('📁 Dossier uploads créé');
-}
-
-// Configuration de multer pour sauvegarder les images
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif/;
@@ -41,16 +25,15 @@ const upload = multer({
     fileFilter: fileFilter
 });
 
-// Route d'upload (protégée)
-router.post('/', authMiddleware, upload.single('image'), (req, res) => {
+router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ erreur: 'Aucune image téléchargée' });
         }
         
-        const imageUrl = `/uploads/${req.file.filename}`;
+        const imageUrl = await UploadService.uploadImage(req.file.buffer, req.file.originalname);
         
-        console.log('✅ Image uploadée:', imageUrl);
+        console.log('✅ Image uploadée sur Cloudinary:', imageUrl);
         
         res.json({
             succes: true,
