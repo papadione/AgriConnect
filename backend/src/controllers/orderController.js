@@ -2,7 +2,7 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
-const SmsService = require('../services/smsService');
+const WhatsAppService = require('../services/whatsappService');
 
 // Créer une commande
 exports.createOrder = async (req, res) => {
@@ -13,13 +13,11 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({ erreur: 'Veuillez remplir tous les champs obligatoires' });
         }
         
-        // L'acheteur est l'utilisateur connecté
         const buyerId = req.user.id;
         
         console.log('Création commande - Acheteur ID:', buyerId);
         console.log('Création commande - Producteur ID:', farmerId);
         
-        // Calculer le total
         let totalAmount = 0;
         const validatedItems = [];
         
@@ -57,22 +55,16 @@ exports.createOrder = async (req, res) => {
             notes
         });
         
-        // === ENVOI DES SMS ===
-        // Récupérer les infos de l'acheteur et du producteur
         const buyer = await User.findById(buyerId);
         const farmer = await User.findById(farmerId);
-        
-        // SMS à l'acheteur : confirmation de commande
+
         if (buyer && buyer.phone) {
-            await SmsService.sendOrderConfirmed(buyer.phone, order.order_number);
+            await WhatsAppService.sendOrderConfirmed(buyer.phone, order.order_number);
         }
-        
-        // SMS au producteur : nouvelle commande reçue
+
         if (farmer && farmer.phone) {
-            const message = `🆕 Nouvelle commande ${order.order_number} de ${buyer.full_name} pour ${Math.floor(totalAmount).toLocaleString()} FCFA`;
-            await SmsService.sendSms(farmer.phone, message);
+            await WhatsAppService.sendNewOrderNotification(farmer.phone, order.order_number, buyer.full_name, totalAmount);
         }
-        // === FIN ENVOI SMS ===
         
         res.status(201).json({
             succes: true,
@@ -131,7 +123,6 @@ exports.getOrderById = async (req, res) => {
             return res.status(404).json({ erreur: 'Commande non trouvée' });
         }
         
-        // Vérifier que l'utilisateur a le droit de voir cette commande
         if (order.buyer_id !== req.user.id && order.farmer_id !== req.user.id && req.user.role !== 'admin') {
             return res.status(403).json({ erreur: 'Accès non autorisé' });
         }
@@ -147,7 +138,7 @@ exports.getOrderById = async (req, res) => {
     }
 };
 
-// Mettre à jour le statut d'une commande (avec SMS)
+// Mettre à jour le statut d'une commande (avec WhatsApp)
 exports.updateOrderStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -159,14 +150,12 @@ exports.updateOrderStatus = async (req, res) => {
             return res.status(400).json({ erreur: 'Statut invalide' });
         }
         
-        // Récupérer la commande
         const order = await Order.findById(id);
         
         if (!order) {
             return res.status(404).json({ erreur: 'Commande non trouvée' });
         }
         
-        // Vérifier les droits
         const isFarmer = req.user.role === 'farmer';
         const isBuyer = req.user.role === 'buyer' && order.buyer_id === req.user.id;
         
@@ -174,7 +163,6 @@ exports.updateOrderStatus = async (req, res) => {
             return res.status(403).json({ erreur: 'Accès non autorisé' });
         }
         
-        // L'acheteur ne peut que annuler une commande en attente
         if (isBuyer && status !== 'cancelled') {
             return res.status(403).json({ erreur: 'Vous ne pouvez que annuler votre commande' });
         }
@@ -185,36 +173,35 @@ exports.updateOrderStatus = async (req, res) => {
         
         const updatedOrder = await Order.updateStatus(id, status, req.user.id, req.user.role);
         
-        // === ENVOI DES SMS SELON LE STATUT ===
+        // === ENVOI DES MESSAGES WHATSAPP SELON LE STATUT ===
         const buyer = await User.findById(order.buyer_id);
         const farmer = await User.findById(order.farmer_id);
         
         switch(status) {
             case 'confirmed':
                 if (buyer && buyer.phone) {
-                    await SmsService.sendOrderConfirmed(buyer.phone, order.order_number);
+                    await WhatsAppService.sendOrderConfirmed(buyer.phone, order.order_number);
                 }
                 break;
             case 'shipped':
                 if (buyer && buyer.phone) {
-                    await SmsService.sendOrderShipped(buyer.phone, order.order_number);
+                    await WhatsAppService.sendOrderShipped(buyer.phone, order.order_number);
                 }
                 break;
             case 'delivered':
                 if (buyer && buyer.phone) {
-                    await SmsService.sendOrderDelivered(buyer.phone, order.order_number);
+                    await WhatsAppService.sendOrderDelivered(buyer.phone, order.order_number);
                 }
                 break;
             case 'cancelled':
                 if (buyer && buyer.phone) {
-                    await SmsService.sendOrderCancelled(buyer.phone, order.order_number);
+                    await WhatsAppService.sendOrderCancelled(buyer.phone, order.order_number);
                 }
                 if (farmer && farmer.phone) {
-                    await SmsService.sendSms(farmer.phone, `❌ La commande ${order.order_number} a été annulée`);
+                    await WhatsAppService.sendMessage(farmer.phone, `❌ La commande ${order.order_number} a été annulée`);
                 }
                 break;
         }
-        // === FIN ENVOI SMS ===
         
         res.json({
             succes: true,
