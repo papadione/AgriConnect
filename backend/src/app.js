@@ -58,5 +58,19 @@ app.listen(port, () => {
     console.log(`📝 Environnement: ${process.env.NODE_ENV}`);
     console.log(`✅ API disponible: http://localhost:${port}/api/v1`);
 });
+// Route racine
+app.get('/', (req, res) => {
+    res.json({
+        message: 'AgriConnect API',
+        version: '1.0.0',
+        status: 'online',
+        endpoints: {
+            produits: '/api/v1/produits',
+            auth: '/api/v1/auth',
+            commandes: '/api/v1/commandes',
+            health: '/api/v1/health'
+        }
+    });
+});
 
 module.exports = app;
