@@ -10,7 +10,9 @@ exports.createProduct = async (req, res) => {
             return res.status(403).json({ erreur: 'Seuls les agriculteurs peuvent ajouter des produits' });
         }
         
-        const { name, categoryId, description, price, unit, quantity, minOrder, images } = req.body;
+        const { name, categoryId, description, price, unit, quantity, minOrder, images, regions } = req.body;
+        
+        console.log('📦 Création produit - Régions reçues:', regions);
         
         if (!name || !price || !unit || !quantity) {
             return res.status(400).json({ erreur: 'Veuillez remplir tous les champs obligatoires' });
@@ -33,7 +35,8 @@ exports.createProduct = async (req, res) => {
             unit,
             quantity,
             minOrder: minOrder || 1,
-            images: imagesArray
+            images: imagesArray,
+            regions: regions || []
         });
         
         res.status(201).json({
@@ -53,6 +56,7 @@ exports.createProduct = async (req, res) => {
         res.status(500).json({ erreur: 'Erreur lors de la création du produit' });
     }
 };
+
 
 // Lister tous les produits
 exports.getAllProducts = async (req, res) => {

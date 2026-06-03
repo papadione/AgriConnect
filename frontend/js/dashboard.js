@@ -216,117 +216,153 @@
     // ================= GESTION DES COMMANDES =================
 
     async function loadOrders() {
-        const token = localStorage.getItem('token');
-        const userData = checkAuth();
+    const token = localStorage.getItem('token');
+    const userData = checkAuth();
+    
+    if (!userData) return;
+    
+    const ordersList = document.getElementById('ordersList');
+    if (!ordersList) return;
+    
+    try {
+        let url = `${API_URL}/commandes/mes-commandes`;
         
-        if (!userData) return;
-        
-        const ordersList = document.getElementById('ordersList');
-        if (!ordersList) return;
-        
-        try {
-            const response = await fetch(`${API_URL}/commandes/mes-commandes`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const data = await response.json();
-            
-            if (data.succes && data.commandes && data.commandes.length > 0) {
-                displayOrders(data.commandes);
-            } else {
-                ordersList.innerHTML = '<p class="empty-message">Aucune commande pour le moment</p>';
-            }
-        } catch (error) {
-            console.error('Erreur chargement commandes:', error);
-            ordersList.innerHTML = '<p class="error-message">Erreur de chargement des commandes</p>';
-            showNotification('Erreur de chargement des commandes', 'error', 'Erreur');
+        // Si l'utilisateur est agriculteur, récupérer les commandes reçues (en tant que vendeur)
+        if (userData.user.role === 'agriculteur') {
+            url = `${API_URL}/commandes/recues`;
+            console.log('Agriculteur - Chargement des commandes reçues');
+        } else {
+            console.log('Acheteur - Chargement de mes commandes');
         }
+        
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const data = await response.json();
+        console.log('Commandes chargées:', data);
+        
+        if (data.succes && data.commandes && data.commandes.length > 0) {
+            displayOrders(data.commandes);
+        } else {
+            ordersList.innerHTML = '<p class="empty-message">Aucune commande pour le moment</p>';
+        }
+    } catch (error) {
+        console.error('Erreur chargement commandes:', error);
+        ordersList.innerHTML = '<p class="error-message">Erreur de chargement des commandes</p>';
+        showNotification('Erreur de chargement des commandes', 'error', 'Erreur');
     }
+}
 
     function displayOrders(orders) {
-        const ordersList = document.getElementById('ordersList');
-        const userData = checkAuth();
-        const isFarmer = userData?.user.role === 'agriculteur';
-        const isBuyer = userData?.user.role === 'acheteur';
+    const ordersList = document.getElementById('ordersList');
+    const userData = checkAuth();
+    const isFarmer = userData?.user.role === 'agriculteur';
+    const isBuyer = userData?.user.role === 'acheteur';
+    
+    if (!orders || orders.length === 0) {
+        ordersList.innerHTML = '<p class="empty-message">Aucune commande pour le moment</p>';
+        return;
+    }
+    
+    ordersList.innerHTML = orders.map(order => {
+        let actions = '';
         
-        if (!orders || orders.length === 0) {
-            ordersList.innerHTML = '<p class="empty-message">Aucune commande pour le moment</p>';
-            return;
+        if (isFarmer) {
+            if (order.status === 'pending') {
+                actions = `
+                    <div class="order-actions">
+                        <button class="btn-confirm-order" data-id="${order.id}" data-status="confirmed">✅ Confirmer</button>
+                        <button class="btn-cancel-order" data-id="${order.id}" data-status="cancelled">❌ Annuler</button>
+                    </div>
+                `;
+            } else if (order.status === 'confirmed') {
+                actions = `
+                    <div class="order-actions">
+                        <button class="btn-prepare-order" data-id="${order.id}" data-status="preparing">📦 Préparer</button>
+                    </div>
+                `;
+            } else if (order.status === 'preparing') {
+                actions = `
+                    <div class="order-actions">
+                        <button class="btn-ship-order" data-id="${order.id}" data-status="shipped">🚚 Expédier</button>
+                    </div>
+                `;
+            } else if (order.status === 'shipped') {
+                actions = `
+                    <div class="order-actions">
+                        <button class="btn-deliver-order" data-id="${order.id}" data-status="delivered">✅ Livrer</button>
+                    </div>
+                `;
+            }
+        } else if (isBuyer) {
+            if (order.status === 'pending') {
+                actions = `
+                    <div class="order-actions">
+                        <button class="btn-cancel-order" data-id="${order.id}" data-status="cancelled">❌ Annuler ma commande</button>
+                    </div>
+                `;
+            }
         }
         
-        ordersList.innerHTML = orders.map(order => {
-            let actions = '';
-            
-            if (isFarmer) {
-                // Actions pour l'agriculteur
-                if (order.status === 'pending') {
-                    actions = `
-                        <div class="order-actions">
-                            <button class="btn-confirm-order" data-id="${order.id}" data-status="confirmed">✅ Confirmer</button>
-                            <button class="btn-cancel-order" data-id="${order.id}" data-status="cancelled">❌ Annuler</button>
-                        </div>
-                    `;
-                } else if (order.status === 'confirmed') {
-                    actions = `
-                        <div class="order-actions">
-                            <button class="btn-prepare-order" data-id="${order.id}" data-status="preparing">📦 Préparer</button>
-                        </div>
-                    `;
-                } else if (order.status === 'preparing') {
-                    actions = `
-                        <div class="order-actions">
-                            <button class="btn-ship-order" data-id="${order.id}" data-status="shipped">🚚 Expédier</button>
-                        </div>
-                    `;
-                } else if (order.status === 'shipped') {
-                    actions = `
-                        <div class="order-actions">
-                            <button class="btn-deliver-order" data-id="${order.id}" data-status="delivered">✅ Livrer</button>
-                        </div>
-                    `;
-                }
-            } else if (isBuyer) {
-                // Actions pour l'acheteur (uniquement annulation si en attente)
-                if (order.status === 'pending') {
-                    actions = `
-                        <div class="order-actions">
-                            <button class="btn-cancel-order" data-id="${order.id}" data-status="cancelled">❌ Annuler ma commande</button>
-                        </div>
-                    `;
-                }
-            }
-            
-            // Afficher le nom du producteur ou de l'acheteur selon le rôle
-            const otherParty = isFarmer 
-                ? `<p><strong>Acheteur:</strong> ${order.buyer_name || 'Client'}</p>`
-                : `<p><strong>Producteur:</strong> ${order.farmer_name || 'Producteur'}</p>`;
-            
-            return `
-                <div class="order-card">
-                    <div class="order-header">
-                        <span class="order-number">${order.order_number}</span>
-                        <span class="order-status ${order.status}">${getStatusText(order.status)}</span>
-                    </div>
-                    <div class="order-info">
-                        <p><strong>Date:</strong> ${new Date(order.created_at).toLocaleDateString('fr-FR')}</p>
-                        <p><strong>Total:</strong> ${Math.floor(order.total_amount).toLocaleString()} FCFA</p>
-                        ${otherParty}
-                        ${order.delivery_address ? `<p><strong>Adresse de livraison:</strong> ${order.delivery_address}</p>` : ''}
-                    </div>
-                    ${actions}
-                </div>
-            `;
-        }).join('');
+        // Barre de progression
+        const steps = ['pending', 'confirmed', 'preparing', 'shipped', 'delivered'];
+        const currentStep = steps.indexOf(order.status);
         
-        // Ajouter les événements aux boutons
-        document.querySelectorAll('.btn-confirm-order, .btn-prepare-order, .btn-ship-order, .btn-deliver-order, .btn-cancel-order').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const orderId = btn.dataset.id;
-                const newStatus = btn.dataset.status;
-                updateOrderStatus(orderId, newStatus);
-            });
+        const progressBar = `
+            <div class="order-progress">
+                <div class="progress-steps">
+                    <span class="step ${currentStep >= 0 ? 'active' : ''}">📝</span>
+                    <span class="step-line ${currentStep >= 1 ? 'active' : ''}"></span>
+                    <span class="step ${currentStep >= 1 ? 'active' : ''}">✅</span>
+                    <span class="step-line ${currentStep >= 2 ? 'active' : ''}"></span>
+                    <span class="step ${currentStep >= 2 ? 'active' : ''}">📦</span>
+                    <span class="step-line ${currentStep >= 3 ? 'active' : ''}"></span>
+                    <span class="step ${currentStep >= 3 ? 'active' : ''}">🚚</span>
+                    <span class="step-line ${currentStep >= 4 ? 'active' : ''}"></span>
+                    <span class="step ${currentStep >= 4 ? 'active' : ''}">🎉</span>
+                </div>
+                <div class="progress-labels">
+                    <span>En attente</span>
+                    <span>Confirmée</span>
+                    <span>Préparation</span>
+                    <span>Expédiée</span>
+                    <span>Livrée</span>
+                </div>
+            </div>
+        `;
+        
+        const otherParty = isFarmer 
+            ? `<p><strong>Acheteur:</strong> ${order.buyer_name || 'Client'}</p>`
+            : `<p><strong>Producteur:</strong> ${order.farmer_name || 'Producteur'}</p>`;
+        
+        return `
+            <div class="order-card">
+                <div class="order-header">
+                    <span class="order-number">${order.order_number}</span>
+                    <span class="order-status ${order.status}">${getStatusText(order.status)}</span>
+                </div>
+                ${progressBar}
+                <div class="order-info">
+                    <p><strong>Date:</strong> ${new Date(order.created_at).toLocaleDateString('fr-FR')}</p>
+                    <p><strong>Total:</strong> ${Math.floor(order.total_amount).toLocaleString()} FCFA</p>
+                    ${otherParty}
+                    ${order.delivery_address ? `<p><strong>Adresse de livraison:</strong> ${order.delivery_address}</p>` : ''}
+                </div>
+                ${actions}
+            </div>
+        `;
+    }).join('');
+    
+    // Ajouter les événements aux boutons
+    document.querySelectorAll('.btn-confirm-order, .btn-prepare-order, .btn-ship-order, .btn-deliver-order, .btn-cancel-order').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const orderId = btn.dataset.id;
+            const newStatus = btn.dataset.status;
+            updateOrderStatus(orderId, newStatus);
         });
-    }
+    });
+}
 
     function getStatusText(status) {
         const statusMap = {
@@ -462,38 +498,41 @@
     }
 
     function openAddProductModal() {
-        const modal = document.getElementById('addProductModal');
-        if (modal) {
-            document.getElementById('modalProductName').value = '';
-            document.getElementById('modalProductPrice').value = '';
-            document.getElementById('modalProductUnit').value = 'kg';
-            document.getElementById('modalProductQuantity').value = '';
-            document.getElementById('modalProductCategory').value = '1';
-            document.getElementById('modalProductDescription').value = '';
-            document.getElementById('modalProductImage').value = '';
-            document.getElementById('modalImagePreview').innerHTML = '';
-            
-            const regionCheckboxes = document.querySelectorAll('#regionsCheckboxGroup input[type="checkbox"]');
-            regionCheckboxes.forEach(cb => {
-                cb.checked = false;
-            });
-            
-            modal.style.display = 'flex';
-            
-            const imageInput = document.getElementById('modalProductImage');
-            const preview = document.getElementById('modalImagePreview');
-            imageInput.onchange = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        preview.innerHTML = `<img src="${event.target.result}" style="max-width: 100px; max-height: 100px; border-radius: 8px;">`;
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-        }
+    const modal = document.getElementById('addProductModal');
+    if (modal) {
+        // Réinitialiser les champs texte
+        document.getElementById('modalProductName').value = '';
+        document.getElementById('modalProductPrice').value = '';
+        document.getElementById('modalProductUnit').value = 'kg';
+        document.getElementById('modalProductQuantity').value = '';
+        document.getElementById('modalProductCategory').value = '1';
+        document.getElementById('modalProductDescription').value = '';
+        document.getElementById('modalProductImage').value = '';
+        document.getElementById('modalImagePreview').innerHTML = '';
+        
+        // Réinitialiser les checkboxes des régions
+        const regionCheckboxes = document.querySelectorAll('#modalRegionsGroup input[type="checkbox"]');
+        regionCheckboxes.forEach(cb => {
+            cb.checked = false;
+        });
+        
+        modal.style.display = 'flex';
+        
+        // Preview image
+        const imageInput = document.getElementById('modalProductImage');
+        const preview = document.getElementById('modalImagePreview');
+        imageInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    preview.innerHTML = `<img src="${event.target.result}" style="max-width: 100px; max-height: 100px; border-radius: 8px;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
     }
+}
 
     function closeAddProductModal() {
         const modal = document.getElementById('addProductModal');
@@ -555,127 +594,130 @@
 
     // ================= AJOUT PRODUIT =================
     async function saveProductFromModal() {
-        const token = localStorage.getItem('token');
-        const userData = checkAuth();
+    const token = localStorage.getItem('token');
+    const userData = checkAuth();
+    
+    if (!userData || userData.user.role !== 'agriculteur') {
+        showNotification('Vous devez être agriculteur pour ajouter un produit', 'warning', 'Accès refusé');
+        return;
+    }
+    
+    const name = document.getElementById('modalProductName').value;
+    const price = document.getElementById('modalProductPrice').value;
+    const unit = document.getElementById('modalProductUnit').value;
+    const quantity = document.getElementById('modalProductQuantity').value;
+    const categoryId = document.getElementById('modalProductCategory').value;
+    const description = document.getElementById('modalProductDescription').value;
+    const imageFile = document.getElementById('modalProductImage').files[0];
+    
+    // Récupérer les régions sélectionnées CORRECTEMENT
+    const selectedRegions = Array.from(
+        document.querySelectorAll('#modalRegionsGroup input[type="checkbox"]:checked')
+    ).map(cb => cb.value);
+    
+    console.log('Régions sélectionnées pour ajout:', selectedRegions);
+    
+    if (!name || !price || !quantity) {
+        showNotification('Veuillez remplir tous les champs obligatoires', 'warning', 'Champs manquants');
+        return;
+    }
+    
+    if (price <= 0 || quantity <= 0) {
+        showNotification('Le prix et la quantité doivent être supérieurs à 0', 'warning', 'Valeur invalide');
+        return;
+    }
+    
+    if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+        showNotification('L\'image est trop volumineuse (maximum 5MB). Veuillez choisir une image plus petite.', 'error', 'Image trop grande');
+        return;
+    }
+    
+    const btn = document.getElementById('saveProductModal');
+    const originalText = btn.textContent;
+    btn.textContent = 'Publication...';
+    btn.disabled = true;
+    
+    try {
+        let imageUrl = '';
         
-        if (!userData || userData.user.role !== 'agriculteur') {
-            showNotification('Vous devez être agriculteur pour ajouter un produit', 'warning', 'Accès refusé');
-            return;
-        }
-        
-        const name = document.getElementById('modalProductName').value;
-        const price = document.getElementById('modalProductPrice').value;
-        const unit = document.getElementById('modalProductUnit').value;
-        const quantity = document.getElementById('modalProductQuantity').value;
-        const categoryId = document.getElementById('modalProductCategory').value;
-        const description = document.getElementById('modalProductDescription').value;
-        const imageFile = document.getElementById('modalProductImage').files[0];
-        
-        const selectedRegions = Array.from(
-            document.querySelectorAll('#regionsCheckboxGroup input[type="checkbox"]:checked')
-        ).map(cb => cb.value);
-        
-        if (!name || !price || !quantity) {
-            showNotification('Veuillez remplir tous les champs obligatoires', 'warning', 'Champs manquants');
-            return;
-        }
-        
-        if (price <= 0 || quantity <= 0) {
-            showNotification('Le prix et la quantité doivent être supérieurs à 0', 'warning', 'Valeur invalide');
-            return;
-        }
-        
-        if (imageFile && imageFile.size > 5 * 1024 * 1024) {
-            showNotification('L\'image est trop volumineuse (maximum 5MB). Veuillez choisir une image plus petite.', 'error', 'Image trop grande');
-            return;
-        }
-        
-        const btn = document.getElementById('saveProductModal');
-        const originalText = btn.textContent;
-        btn.textContent = 'Publication...';
-        btn.disabled = true;
-        
-        try {
-            let imageUrl = '';
-            
-            if (imageFile) {
-                let fileToUpload = imageFile;
-                if (imageFile.size > 2 * 1024 * 1024) {
-                    showNotification('Compression de l\'image en cours...', 'info', 'Optimisation');
-                    fileToUpload = await compressImage(imageFile);
-                }
-                
-                showNotification('Téléchargement de l\'image en cours...', 'info', 'Chargement');
-                
-                const formData = new FormData();
-                formData.append('image', fileToUpload);
-                
-                const uploadResponse = await fetch(`${API_URL}/upload`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-                
-                const uploadData = await uploadResponse.json();
-                if (uploadData.succes) {
-                    imageUrl = uploadData.url;
-                    showNotification('Image téléchargée avec succès !', 'success', 'Image ajoutée');
-                } else {
-                    showNotification(uploadData.erreur || 'Erreur lors de l\'upload', 'error', 'Erreur');
-                    btn.textContent = originalText;
-                    btn.disabled = false;
-                    return;
-                }
+        if (imageFile) {
+            let fileToUpload = imageFile;
+            if (imageFile.size > 2 * 1024 * 1024) {
+                showNotification('Compression de l\'image en cours...', 'info', 'Optimisation');
+                fileToUpload = await compressImage(imageFile);
             }
             
-            const response = await fetch(`${API_URL}/produits`, {
+            showNotification('Téléchargement de l\'image en cours...', 'info', 'Chargement');
+            
+            const formData = new FormData();
+            formData.append('image', fileToUpload);
+            
+            const uploadResponse = await fetch(`${API_URL}/upload`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    name: name,
-                    price: parseFloat(price),
-                    unit: unit,
-                    quantity: parseFloat(quantity),
-                    categoryId: parseInt(categoryId),
-                    description: description,
-                    minOrder: 1,
-                    images: imageUrl ? [imageUrl] : [],
-                    regions: selectedRegions
-                })
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
             });
             
-            const data = await response.json();
-            
-            if (response.ok) {
-                showNotification('Produit ajouté avec succès !', 'success', 'Produit ajouté');
-                closeAddProductModal();
-                await loadProducts();
-                
-                const productsTab = document.querySelector('.tab-dash[data-tab="products"]');
-                const ordersTab = document.querySelector('.tab-dash[data-tab="orders"]');
-                const productsPane = document.getElementById('productsPane');
-                const ordersPane = document.getElementById('ordersPane');
-                
-                if (productsTab && productsPane) {
-                    productsTab.classList.add('active');
-                    ordersTab?.classList.remove('active');
-                    productsPane.classList.add('active');
-                    ordersPane?.classList.remove('active');
-                }
+            const uploadData = await uploadResponse.json();
+            if (uploadData.succes) {
+                imageUrl = uploadData.url;
+                showNotification('Image téléchargée avec succès !', 'success', 'Image ajoutée');
             } else {
-                showNotification(data.erreur || 'Impossible d\'ajouter le produit', 'error', 'Erreur');
+                showNotification(uploadData.erreur || 'Erreur lors de l\'upload', 'error', 'Erreur');
+                btn.textContent = originalText;
+                btn.disabled = false;
+                return;
             }
-        } catch (error) {
-            console.error('Erreur:', error);
-            showNotification('Erreur de connexion au serveur', 'error', 'Connexion');
-        } finally {
-            btn.textContent = originalText;
-            btn.disabled = false;
         }
+        
+        const response = await fetch(`${API_URL}/produits`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                name: name,
+                price: parseFloat(price),
+                unit: unit,
+                quantity: parseFloat(quantity),
+                categoryId: parseInt(categoryId),
+                description: description,
+                minOrder: 1,
+                images: imageUrl ? [imageUrl] : [],
+                regions: selectedRegions  // ← C'est cette ligne qui est importante
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showNotification('Produit ajouté avec succès !', 'success', 'Produit ajouté');
+            closeAddProductModal();
+            await loadProducts();
+            
+            const productsTab = document.querySelector('.tab-dash[data-tab="products"]');
+            const ordersTab = document.querySelector('.tab-dash[data-tab="orders"]');
+            const productsPane = document.getElementById('productsPane');
+            const ordersPane = document.getElementById('ordersPane');
+            
+            if (productsTab && productsPane) {
+                productsTab.classList.add('active');
+                ordersTab?.classList.remove('active');
+                productsPane.classList.add('active');
+                ordersPane?.classList.remove('active');
+            }
+        } else {
+            showNotification(data.erreur || 'Impossible d\'ajouter le produit', 'error', 'Erreur');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('Erreur de connexion au serveur', 'error', 'Connexion');
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
     }
+}
 
     // ================= ACTIONS SUR LES PRODUITS =================
 

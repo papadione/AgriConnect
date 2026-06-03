@@ -2,17 +2,31 @@
 // AgriConnect Sénégal — cart.js
 // =========================================
 
-const CART_KEY = 'agriconnect_cart';
+// Clé pour le stockage local (basée sur l'utilisateur)
+function getCartKey() {
+    const user = localStorage.getItem('user');
+    if (user) {
+        try {
+            const userData = JSON.parse(user);
+            return `agriconnect_cart_${userData.id}`;
+        } catch (e) {
+            return 'agriconnect_cart';
+        }
+    }
+    return 'agriconnect_cart';
+}
 
 // Gestion du panier
 const Cart = {
     getItems() {
-        const cart = localStorage.getItem(CART_KEY);
+        const key = getCartKey();
+        const cart = localStorage.getItem(key);
         return cart ? JSON.parse(cart) : [];
     },
     
     saveItems(items) {
-        localStorage.setItem(CART_KEY, JSON.stringify(items));
+        const key = getCartKey();
+        localStorage.setItem(key, JSON.stringify(items));
         this.updateBadge();
         this.updateCartModal();
     },
@@ -30,44 +44,13 @@ const Cart = {
                 price: product.price,
                 unit: product.unit,
                 image: product.image,
+                farmerId: product.farmerId,
                 quantity: 1
             });
         }
         
         this.saveItems(items);
         this.showNotification(`${product.name} ajouté au panier`, 'success');
-    },
-    
-    // === NOTIFICATION (AJOUTER CETTE FONCTION) ===
-    showNotification(message, type = 'success') {
-        const icons = { success: '✓', error: '✗', info: 'ℹ', warning: '⚠' };
-        const titles = { success: 'Succès', error: 'Erreur', info: 'Information', warning: 'Attention' };
-        
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.innerHTML = `
-            <div class="notification-icon">${icons[type]}</div>
-            <div class="notification-content">
-                <div class="notification-title">${titles[type]}</div>
-                <div class="notification-message">${message}</div>
-            </div>
-            <button class="notification-close">&times;</button>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        const closeBtn = notification.querySelector('.notification-close');
-        closeBtn.addEventListener('click', () => {
-            notification.classList.add('notification-hide');
-            setTimeout(() => notification.remove(), 300);
-        });
-        
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.classList.add('notification-hide');
-                setTimeout(() => notification.remove(), 300);
-            }
-        }, 3000);
     },
     
     removeItem(productId) {
@@ -89,6 +72,13 @@ const Cart = {
             item.quantity = quantity;
             this.saveItems(items);
         }
+    },
+    
+    clear() {
+        const key = getCartKey();
+        localStorage.removeItem(key);
+        this.updateBadge();
+        this.updateCartModal();
     },
     
     getTotal() {
@@ -180,6 +170,37 @@ const Cart = {
         if (modal) {
             modal.style.display = 'none';
         }
+    },
+    
+    showNotification(message, type = 'success') {
+        const icons = { success: '✓', error: '✗', info: 'ℹ', warning: '⚠' };
+        const titles = { success: 'Succès', error: 'Erreur', info: 'Information', warning: 'Attention' };
+        
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-icon">${icons[type]}</div>
+            <div class="notification-content">
+                <div class="notification-title">${titles[type]}</div>
+                <div class="notification-message">${message}</div>
+            </div>
+            <button class="notification-close">&times;</button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        const closeBtn = notification.querySelector('.notification-close');
+        closeBtn.addEventListener('click', () => {
+            notification.classList.add('notification-hide');
+            setTimeout(() => notification.remove(), 300);
+        });
+        
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.classList.add('notification-hide');
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, 3000);
     }
 };
 

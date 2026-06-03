@@ -481,12 +481,15 @@ function setupAvatarRedirect() {
 
 // Créer une commande depuis le panier
 async function createOrder() {
+    console.log('createOrder appelée');
+    
     const token = localStorage.getItem('token');
     const userData = checkAuth();
     
     if (!userData) return;
     
     const items = Cart.getItems();
+    console.log('Items dans le panier:', items);
     
     if (items.length === 0) {
         showNotification('Votre panier est vide', 'warning', 'Panier');
@@ -507,16 +510,24 @@ async function createOrder() {
         return;
     }
     
-    const deliveryAddress = prompt('Votre adresse de livraison :');
-    if (!deliveryAddress) return;
+    // Demander les informations de livraison
+    const region = prompt('📍 Votre région (Dakar, Thiès, etc.) :');
+    if (!region) return;
     
-    const deliveryPhone = prompt('Votre numéro de téléphone :');
+    const quartier = prompt('🏠 Votre quartier / adresse précise :');
+    if (!quartier) return;
+    
+    const deliveryPhone = prompt('📱 Votre numéro de téléphone :');
     if (!deliveryPhone) return;
+    
+    const deliveryAddress = `${quartier}, ${region}`;
     
     const orderItems = items.map(item => ({
         productId: item.id,
         quantity: item.quantity
     }));
+    
+    console.log('Envoi commande:', { farmerId, orderItems, deliveryAddress, deliveryPhone });
     
     try {
         const response = await fetch(`${API_URL}/commandes`, {
@@ -534,6 +545,7 @@ async function createOrder() {
         });
         
         const data = await response.json();
+        console.log('Réponse commande:', data);
         
         if (response.ok) {
             showNotification('Commande créée avec succès !', 'success', 'Commande');
@@ -547,7 +559,175 @@ async function createOrder() {
     }
 }
 
-// ================= INITIALISATION =================
+// Initialisation
+function initCart() {
+    const cartBtn = document.getElementById('cartBtn');
+    if (cartBtn) {
+        cartBtn.addEventListener('click', () => Cart.openModal());
+    }
+    
+    const closeCart = document.getElementById('closeCartModal');
+    if (closeCart) {
+        closeCart.addEventListener('click', () => Cart.closeModal());
+    }
+    
+    const modal = document.getElementById('cartModal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) Cart.closeModal();
+        });
+    }
+    
+    // === AJOUTER CETTE LIGNE ===
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) {
+        checkoutBtn.addEventListener('click', () => {
+            console.log('Clic sur le bouton checkout');
+            Cart.closeModal();
+            if (typeof createOrder === 'function') {
+                createOrder();
+            } else {
+                console.error('createOrder n\'est pas défini');
+            }
+        });
+    }
+    
+    Cart.updateBadge();
+}
+// Variables pour la commande
+let pendingOrder = null;
+
+// Ouvrir le modal de livraison
+function openDeliveryModal() {
+    const modal = document.getElementById('deliveryModal');
+    if (modal) {
+        document.getElementById('deliveryRegion').value = '';
+        document.getElementById('deliveryQuartier').value = '';
+        document.getElementById('deliveryPhone').value = '';
+        modal.style.display = 'flex';
+    }
+}
+
+function closeDeliveryModal() {
+    const modal = document.getElementById('deliveryModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Initialisation du modal de livraison
+function setupDeliveryModal() {
+    const closeBtn = document.getElementById('closeDeliveryModal');
+    const cancelBtn = document.getElementById('cancelDeliveryBtn');
+    const confirmBtn = document.getElementById('confirmDeliveryBtn');
+    
+    if (closeBtn) closeBtn.onclick = closeDeliveryModal;
+    if (cancelBtn) cancelBtn.onclick = closeDeliveryModal;
+    if (confirmBtn) confirmBtn.onclick = confirmOrder;
+    
+    const modal = document.getElementById('deliveryModal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeDeliveryModal();
+        });
+    }
+}
+
+// Modifier la fonction createOrder (remplacer l'ancienne)
+async function createOrder() {
+    console.log('createOrder appelée');
+    
+    const token = localStorage.getItem('token');
+    const userData = checkAuth();
+    
+    if (!userData) return;
+    
+    const items = Cart.getItems();
+    
+    if (items.length === 0) {
+        showNotification('Votre panier est vide', 'warning', 'Panier');
+        return;
+    }
+    
+    const farmerId = items[0].farmerId;
+    const sameFarmer = items.every(item => item.farmerId === farmerId);
+    
+    if (!sameFarmer) {
+        showNotification('Vous ne pouvez commander que des produits du même producteur', 'warning', 'Commande');
+        return;
+    }
+    
+    if (!farmerId) {
+        showNotification('Impossible d\'identifier le producteur', 'error', 'Erreur');
+        return;
+    }
+    
+    // Stocker les infos pour validation
+    pendingOrder = {
+        farmerId: parseInt(farmerId),
+        items: items.map(item => ({
+            productId: item.id,
+            quantity: item.quantity
+        }))
+    };
+    
+    // Ouvrir le modal de livraison
+    openDeliveryModal();
+}
+
+// Confirmer la commande avec les infos de livraison
+async function confirmOrder() {
+    const region = document.getElementById('deliveryRegion').value;
+    const quartier = document.getElementById('deliveryQuartier').value;
+    let deliveryPhone = document.getElementById('deliveryPhone').value;
+    
+    if (!region || !quartier || !deliveryPhone) {
+        showNotification('Veuillez remplir tous les champs', 'warning', 'Champs manquants');
+        return;
+    }
+    
+    // Nettoyer le téléphone
+    deliveryPhone = deliveryPhone.replace(/\s/g, '');
+    if (!deliveryPhone.startsWith('221')) {
+        deliveryPhone = '221' + deliveryPhone;
+    }
+    
+    const deliveryAddress = `${quartier}, ${region}`;
+    
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`${API_URL}/commandes`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                farmerId: pendingOrder.farmerId,
+                items: pendingOrder.items,
+                deliveryAddress: deliveryAddress,
+                deliveryPhone: deliveryPhone
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showNotification('Commande créée avec succès !', 'success', 'Commande');
+            Cart.clear();
+            closeDeliveryModal();
+            pendingOrder = null;
+        } else {
+            showNotification(data.erreur || 'Erreur lors de la création', 'error', 'Erreur');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('Erreur de connexion au serveur', 'error', 'Connexion');
+    }
+}
+
+// Ajouter setupDeliveryModal dans DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
     initCart();
     displayUserName();
@@ -556,6 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupRegionFilter();
     setupFilters();
     setupDetailModal();
+    setupDeliveryModal();  // ← AJOUTER CETTE LIGNE
     setupAvatarRedirect();  
     loadProducts();
 });
