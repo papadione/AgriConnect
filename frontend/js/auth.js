@@ -247,16 +247,28 @@ document.addEventListener('DOMContentLoaded', () => {
           
           const data = await response.json();
           
-          if (response.ok && data.requiresValidation) {
-              // Afficher le modal de validation SMS
-              showValidationModal(data.phone);
-          } else if (response.ok) {
-              // Inscription directe (si pas de validation)
-              localStorage.setItem('token', data.token);
-              localStorage.setItem('user', JSON.stringify(data.utilisateur));
+        //   if (response.ok && data.requiresValidation) {
+        //       // Afficher le modal de validation SMS
+        //       showValidationModal(data.phone);
+        //   } else if (response.ok) {
+        //       // Inscription directe (si pas de validation)
+        //       localStorage.setItem('token', data.token);
+        //       localStorage.setItem('user', JSON.stringify(data.utilisateur));
               
-              showNotification('Inscription réussie ! Bienvenue sur AgriConnect Sénégal !', 'success', 'Bienvenue');
+        //       showNotification('Inscription réussie ! Bienvenue sur AgriConnect Sénégal !', 'success', 'Bienvenue');
               
+        if (response.ok) {
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.utilisateur));
+    
+    showNotification('Inscription réussie ! Bienvenue sur AgriConnect Sénégal !', 'success', 'Bienvenue');
+    
+    if (data.utilisateur.role === 'agriculteur') {
+        window.location.href = 'dashboard.html';
+    } else {
+        window.location.href = 'catalogue.html';
+    }
+}
               if (data.utilisateur.role === 'agriculteur') {
                   window.location.href = 'dashboard.html';
               } else {
