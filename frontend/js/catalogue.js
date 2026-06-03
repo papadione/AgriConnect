@@ -3,7 +3,7 @@
 // =========================================
 
 const API_URL = 'https://agriconnect-api-ylnb.onrender.com/api/v1';
-const BACKEND_URL = 'http://localhost:3000';
+const BACKEND_URL = 'https://agriconnect-api-ylnb.onrender.com';
 
 // État des filtres
 let currentFilters = {
@@ -219,8 +219,14 @@ function displayProducts(products) {
         let imageUrl = '';
         if (product.images && product.images.length > 0) {
             let imgPath = product.images[0];
-            if (typeof imgPath === 'object' && imgPath.url) imgPath = imgPath.url;
-            imageUrl = `${BACKEND_URL}${imgPath}`;
+            if (typeof imgPath === 'object' && imgPath.url) {
+                imgPath = imgPath.url;
+            }
+            if (imgPath && imgPath.startsWith('http')) {
+                imageUrl = imgPath;
+            } else if (imgPath) {
+                imageUrl = `${BACKEND_URL}${imgPath}`;
+            }
         }
         
         const regionsText = product.regions && product.regions.length > 0 
@@ -302,8 +308,14 @@ async function openProductDetail(productId) {
             const imgElement = document.getElementById('detailProductImage');
             if (p.images && p.images.length > 0) {
                 let imgPath = p.images[0];
-                if (typeof imgPath === 'object' && imgPath.url) imgPath = imgPath.url;
-                imgElement.src = `${BACKEND_URL}${imgPath}`;
+                if (typeof imgPath === 'object' && imgPath.url) {
+                    imgPath = imgPath.url;
+                }
+                if (imgPath && imgPath.startsWith('http')) {
+                    imgElement.src = imgPath;
+                } else {
+                    imgElement.src = `${BACKEND_URL}${imgPath}`;
+                }
                 imgElement.style.display = 'block';
             } else {
                 imgElement.style.display = 'none';
@@ -572,12 +584,12 @@ function initCart() {
         closeCart.addEventListener('click', () => Cart.closeModal());
     }
     
-    const modal = document.getElementById('cartModal');
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) Cart.closeModal();
-        });
-    }
+   const modal = document.getElementById('cartModal');
+if (modal) {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) Cart.closeModal();  // ← Supprime la parenthèse fermante en trop
+    });
+}
     
     const checkoutBtn = document.getElementById('checkoutBtn');
     if (checkoutBtn) {
